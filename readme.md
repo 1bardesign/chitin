@@ -8,15 +8,15 @@ However, Chitin is in heavy development; widespread consumption is not recommend
 
 # Architecture
 
-Chitin is based on the Entity, Component, System ("ECS") architecture.
+Chitin is built on an Entity, Component, System ("ECS") architecture.
 
-Entities are the fundamental "object" of Chitin. They can be thought of as "bags" of components, ready to be filled. They provide an interface and storage structure for adding, removing, and managing components but do not perform logic on their own.
+Entities are the fundamental "object" of Chitin. They can be thought of as "bags" of components, ready to be filled. They provide an interface and storage structure for adding, removing, and managing components - but do not perform logic on their own.
 
-Components are structures that perform some behaviour or store some data for an entity. They are generally pretty specialised or minimalist but can be as complicated as a tilemap renderer or rigid body. Components can depend on one-another, but are meant to be largely composable. Entities will generally be made up of a handful of them or more. In particular, many of the built in components work together to provide "building blocks" that can be combined with minimal effort into many common types of "game object".
+Components are structures that perform some behaviour for an entity. They are generally pretty specialised and minimalist but can be as complicated as a tilemap renderer or rigid body. Components can depend on one-another, but are meant to be largely composable. Entities will generally be made up of a handful of them or more. In particular, many of the built in components work together to provide "building blocks" that can be combined with minimal effort into many common types of "game object".
 
-Systems are where components "live" - each type of component has a corresponding type of system. They manage the actual creation and destruction of components, as well as updating and rendering components as needed. All systems live in a global registry set up before the project starts to run - custom systems and custom configurations of systems can be devised to best suit each project.
+Systems are where components "live" - each type of component has a corresponding type of system. They manage the actual creation and destruction of components, as well as updating and rendering components as needed. All systems live in a global registry that is configured by the programmer - so custom systems and custom configurations of systems can be devised to best suit each project.
 
-There are some auxilliary structures available to help manage things in real-world projects - things like state management, object grouping and media loading helpers provide an alternative to ad-hoc per-project solutions, while remaining open to you doing it yourself if you want to.
+There are some auxilliary structures available to help manage things in real-world projects - things like state management, object grouping and media loading helpers provide a ready-made alternative to ad-hoc per-project solutions, while remaining open to you doing it yourself if you want to.
 
 # Frequently and Infrequently Asked Questions
 
@@ -38,9 +38,9 @@ However, to get started now:
 
 As always with this question, that depends what you do with it: how much you want to simulate, whether you're running it in the browser or its own container, how performance-conscious you are writing your behaviours, whether you're doing other heavy lifting at the same time, and so on.
 
-The short ballpark answer though, is: as long as you're not targeting mobile, fast enough to simulate at least a thousand colliding, animating particles as discrete entities (no dedicated SpecialParticleSystem) at 30fps on the low end; 60fps on any half-decent machine. However, also totally suitable for lighter stuff on mobile.
+The short ballpark answer though, is: as long as you're not targeting mobile, fast enough to simulate at least a thousand semi-physical (world-colliding) animated particles as discrete entities (no dedicated SpecialParticleSystem) at 30fps on the low end; 60fps on any half-decent machine. However, also totally suitable for lighter stuff on mobile.
 
-Check out the examples and see for yourself.
+The even shorter answer is: check out the examples and see for yourself.
 
 ### Q: Why are you writing such old JS?
 
@@ -54,7 +54,7 @@ The main reason is that Chitin is intended to run your "main loop" and be a fund
 
 ### Q: Why doesn't this ECS work like [some other ECS implementation]?
 
-I've hesitated to call the architecture by the ECS moniker, as there's a lot of buzz and (often contradictory) preconception that comes with it at the moment.
+I've hesitated to call the architecture by the ECS moniker, as it seems to mean different things to different people, and there's a lot of "religious" discussion around it.
 
 However, eradicating the terminology from the project proved difficult and counter-intuitive, so I've just tried to be open about how everything works.
 
@@ -135,23 +135,22 @@ A list of tasks on the agenda - hopefully in constant flux! There are also minor
 
 ### Major:
 
-- animation - basic "fps" callback system? provide prefabs:
-	- 1d frame
-	- 2d frame
+- animation prefabs
 	- framepos
 	- framepos+framesize
 	- animate value?
 - collision detection/resolution
+	- circle, aabb, line/capsule, SAT
 	- between objects
 	- vs tilemap
 	- vs advanced tilemap (tile -> shape mapping)
 - parent/child system
-	- common, transform linking with an offset
+	- transform linking with an offset
+	- probably a flag for whether to apply parent rotation or not
 - owner system
 	- useful for damage, collision filtering and netcode
 - verlet?
-	- most non-physics systems only read/write pos
-	- might be fairly compatible
+	- most non-physics systems only read/write pos, so it might be fairly compatible
 	- transform
 	- constraints
 	- grouping to bodies
