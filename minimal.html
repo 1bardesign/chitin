@@ -48,8 +48,7 @@
 	<script src="./js/chitin/systems/tilemap.js"></script>
 	<script src="./js/chitin/systems/physics.js"></script>
 	<!-- game stuff -->
-	<script src="./js/example/main.js"></script>
-	<script src="./js/example/nbody.js"></script>
+	<script src="./js/main.js"></script>
 
 </head>
 <body>
@@ -57,7 +56,7 @@
 	<script type="text/javascript">
 		//handle scaling the canvas to fit its parent exactly
 		//or else take on the "default" pixel ratio given
-		(function () {
+		function _resize_game_canvas_css () {
 			var c = document.getElementById('canvas');
 			//preserve this
 			var aspect = c.width / c.height;
@@ -75,7 +74,9 @@
 			}
 			c.style.width = ""+w+"px";
 			c.style.height = ""+h+"px";
-		})();
+		};
+		window.addEventListener('resize', _resize_game_canvas_css, false);
+		window.addEventListener('load', _resize_game_canvas_css, false);
 	</script>
 </body>
 </html>

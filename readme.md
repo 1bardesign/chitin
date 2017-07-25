@@ -20,6 +20,18 @@ There are some auxilliary structures available to help manage things in real-wor
 
 # Frequently and Infrequently Asked Questions
 
+### Q: What's the fastest way to start a new chitin project?
+
+This will be streamlined a lot once Chitin is ready for mass consumption!
+
+However, to get started now:
+
+- Create a new folder for your project.
+- Copy the `js/` and `assets/` folders.
+- Remove your copied `js/example/` folder as you wont need it.
+- Add `minimal.html` into your project.
+- Open `main.js` and get coding.
+
 ### Q: How fast is Chitin?
 
 As always with this question, that depends what you do with it: how much you want to simulate, whether you're running it in the browser or its own container, how performance-conscious you are writing your behaviours, whether you're doing other heavy lifting at the same time, and so on.
@@ -28,15 +40,15 @@ The short ballpark answer though, is: as long as you're not targeting mobile, fa
 
 Check out the examples and see for yourself.
 
-### Q: Why are the globals?
-
-This one depends on your perspective, but there's certainly a fair bit going on in the global namespace no matter how you measure it. I'm open to cutting that down, but it's not a priority at the moment.
-
-The main reason is that Chitin is intended to run your "main loop" and be a fundamental part of how you write your application. It's not a minor dependency you pull in for one function. I don't huge benefit to encapsulating such a library, especially as I'm aiming not to have a compilation step during development.
-
 ### Q: Why are you writing such old JS?
 
 So that it runs in the browser without a transpiler, bundler, or whatever else. This means one less step between someone picking up the library and having it running.
+
+### Q: Why all the globals?
+
+This one depends on your perspective, but there's certainly a fair bit going on in the global namespace no matter how you measure it. I am open to cutting that down, but it's not a priority at the moment.
+
+The main reason is that Chitin is intended to run your "main loop" and be a fundamental part of how you write your application. It's not a minor dependency you pull in for one function. I don't huge benefit to encapsulating such a library, especially as I'm aiming not to have a compilation step during development.
 
 ### Q: Why doesn't this ECS work like [some other ECS implementation]?
 
@@ -109,7 +121,7 @@ Tabs on disk, 4 chars wide.
 if(condition) {
 	function_name();
 } else {
-	var something = new Type();
+	var variable_name = new TypeName();
 }
 ```
 

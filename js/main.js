@@ -4,8 +4,8 @@
 //
 //		canonical home for setup(), start(), update() and render()
 //		normal implementation is to choose and initialise your systems here,
-//		then handle any game-global initialisation, and finally pass control
-//		off to a game state for actual game logic.
+//		handle any game-global initialisation, and finally pass control
+//		off to somewhere else for actual game logic.
 //
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -14,41 +14,53 @@
 function setup()
 {
 	/////////////////////////////////////////////
-	//setup the preloading
+	//setup preloading
+
+	//(recommended ordering)
 
 	//network setup if applicable (get it going asap)
 
-	//data files
-	load_file("map.csv");
+	//loading data files
+	//check out media/files.js:load_file
 
-	//load images
-	load_image("sprites", true, 8, 8, false);
+	//loading images
+	//check out media/images.js:load_image
 
-	//audio setup
+	//loading audio
+	//check out media/audios.js:load_audio
+
+	//also recommended to chomp down the audio here
+	//1.0 is that "overloud" default volume setting many indie games have
 	set_volume(0.5);
-	//load_sound("sad_backing");
 }
-
-var global_sm;
 
 function start()
 {
-	global_sm = new StateMachine();
-	global_sm.add_state("nbody", new NBodySimState());
-	global_sm.set_state("nbody");
+	//do whatever you need to get your game going
+
+	//probably set up some systems or initialise a global state machine
+	//that will handle that stuff
 }
 
 function update()
 {
+	//do whatever needs doing every frame
+
+	//probably at least update the systems
+	//and maybe your global state machine
 	update_systems();
-	global_sm.update();
 }
 
 function render()
 {
-	clear_canvas("#1e1817");
-	set_fill("#ead9d7");
+	//(as above)
+	clear_canvas("black");
 
 	render_systems();
-	global_sm.render();
+
+	//just putting _something_ on the screen to say hi!
+	set_fill("white");
+	set_font_center();
+	set_font_middle();
+	draw_text("hello chitin!", get_canvas_halfwidth(), get_canvas_halfheight());
 }
