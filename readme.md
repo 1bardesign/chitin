@@ -1,14 +1,10 @@
-===============================================================================
 # Chitin
-===============================================================================
 
 Chitin is a javascript entity-component-system for game and interactive media development.
 
 Chitin provides sane elementary building blocks for multimedia development, and provides workarounds and solutions for many common browser inconsistencies and inconveniences. It is designed to simplify getting a project off the ground while keeping things sustainable for longer development.
 
 However, Chitin is in heavy development; widespread consumption is not recommended just yet!
-
-===============================================================================
 
 # Architecture
 
@@ -21,8 +17,6 @@ Components are structures that perform some behaviour or store some data for an 
 Systems are where components "live" - each type of component has a corresponding type of system. They manage the actual creation and destruction of components, as well as updating and rendering components as needed. All systems live in a global registry set up before the project starts to run - custom systems and custom configurations of systems can be devised to best suit each project.
 
 There are some auxilliary structures available to help manage things in real-world projects - things like state management, object grouping and media loading helpers provide an alternative to ad-hoc per-project solutions, while remaining open to you doing it yourself if you want to.
-
-===============================================================================
 
 # Frequently and Infrequently Asked Questions
 
@@ -74,8 +68,8 @@ What specifically might be different from some other ECS or Component-Oriented i
 
 	There are generic data store, behaviour, and state machine components for bolting ad-hoc behaviours onto an entity. The use of these is encouraged for throwaway code and prototyping, as it can easily be migrated to a dedicated component as and when needed. This is less rigid than a lot of documented component systems where every behaviour gets its own named, registered component.
 
-===============================================================================
-Built In Components
+# Built In Components
+
 	Behaviour
 		for any one-off behaviour per-entity
 		technically everything "could" be a behaviour like this, but
@@ -96,53 +90,60 @@ Built In Components
 	Tilemap
 		handles rendering a 2d map of images
 
-===============================================================================
-Code Style - Not strictly enforced
+# Code Style - Not strictly enforced
 
-	Tabs, width 4
+1TBS for some consistency with the rest of JS.
 
-	//syntax example
-	if(condition) {
-		function_name();
-	} else {
-		var something = new Type();
-	}
+`UpperCamel` for types. `lower_slugs` for functions and variables.
 
-===============================================================================
-Project TODO
-	A list of tasks on the agenda - hopefully in constant flux
-===============================================================================
-	Major:
-		- animation - basic "fps" callback system? provide prefabs:
-			- 1d frame
-			- 2d frame
-			- framepos
-			- framepos+framesize
-			- animate value?
-		- collision detection/resolution
-			- between objects
-			- vs tilemap
-			- vs advanced tilemap (tile -> shape mapping)
-		- some sort of grouping system
-			- especially for collision/overlap stuff
-			- foreach-style ops
-			- mass destruction
-		- parent/child system
-			- common, transform linking
-		- owner system
-			- useful for damage, collision filtering and netcode
-		- verlet?
-			- most non-physics systems only read/write pos
-			- might be fairly compatible
-			- transform
-			- constraints
-			- grouping to bodies
-		- tri renderer
-		- networking infrastructure
-		- webgl renderer?
-	Minor/Implementation:
-		- consider a more table-like structure for component storage to accelerate component addition/removal
-		- acceleration structures for collisions, drawing etc
-			- bucket grid
-			- quadtree
-===============================================================================
+Tabs on disk, 4 chars wide.
+
+```
+//syntax example
+if(condition) {
+	function_name();
+} else {
+	var something = new Type();
+}
+```
+
+#Project TODO
+
+A list of tasks on the agenda - hopefully in constant flux!
+
+Major:
+
+	- animation - basic "fps" callback system? provide prefabs:
+		- 1d frame
+		- 2d frame
+		- framepos
+		- framepos+framesize
+		- animate value?
+	- collision detection/resolution
+		- between objects
+		- vs tilemap
+		- vs advanced tilemap (tile -> shape mapping)
+	- some sort of grouping system
+		- especially for collision/overlap stuff
+		- foreach-style ops
+		- mass destruction
+	- parent/child system
+		- common, transform linking
+	- owner system
+		- useful for damage, collision filtering and netcode
+	- verlet?
+		- most non-physics systems only read/write pos
+		- might be fairly compatible
+		- transform
+		- constraints
+		- grouping to bodies
+	- tri renderer
+	- networking infrastructure
+	- webgl renderer?
+
+Minor/Implementation:
+
+	- consider a more table-like structure for component storage to accelerate component addition/removal
+	- reusable acceleration structures for collisions, drawing etc
+		- bucket grid
+		- quadtree
