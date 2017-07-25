@@ -53,29 +53,11 @@
 
 </head>
 <body>
-	<canvas id="canvas" width="480" height="270"></canvas>
+	<canvas id="canvas"></canvas>
 	<script type="text/javascript">
-		//handle scaling the canvas to fit its parent exactly
-		//or else take on the "default" pixel ratio given
-		(function () {
-			var c = document.getElementById('canvas');
-			//preserve this
-			var aspect = c.width / c.height;
-			var p = c.parentNode;
-			if(p) {
-				if (p !== document.body) {
-					//parent is some actual element
-					w = p.clientWidth;
-					h = p.clientHeight;
-				} else {
-					//parent is the whole document, fit to "screen"
-					w = window.innerWidth;
-					h = window.innerHeight;
-				}
-			}
-			c.style.width = ""+w+"px";
-			c.style.height = ""+h+"px";
-		})();
+		//handle scaling the canvas to fit its parent with letterboxing
+		window.addEventListener('resize', _resize_game_canvas_css, false);
+		window.addEventListener('load', _resize_game_canvas_css, false);
 	</script>
 </body>
 </html>

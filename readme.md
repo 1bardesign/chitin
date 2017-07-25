@@ -22,15 +22,17 @@ There are some auxilliary structures available to help manage things in real-wor
 
 ### Q: What's the fastest way to start a new chitin project?
 
-This will be streamlined a lot once Chitin is ready for mass consumption!
+This will be streamlined a lot once Chitin is ready for mass consumption! In particular, a combined (and optionally minified) build will be provided to cut down on the number of script tags.
 
 However, to get started now:
 
-- Create a new folder for your project.
-- Copy the `js/` and `assets/` folders.
+- Create a new folder for your project. Be sure to give it a cool name!
+- Create an `assets/` folder in there for your sprites, sounds and data files.
+- Copy in the `js/` folder.
 - Remove your copied `js/example/` folder as you wont need it.
-- Add `minimal.html` into your project.
-- Open `main.js` and get coding.
+- Copy `minimal.html` into your project; rename it as you see fit.
+- Open it and ensure you see "hello chitin!".
+- Open `main.js` and get coding!
 
 ### Q: How fast is Chitin?
 

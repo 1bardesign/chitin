@@ -37,7 +37,7 @@ var _loop_interval;
 var _kernel_frames = 0;
 
 //(encapsulate)
-//(function() {
+(function() {
 	function main_loop()
 	{
 		//tick over fps
@@ -83,8 +83,12 @@ var _kernel_frames = 0;
 		_loop_interval = setInterval(main_loop, dt_ms());
 	}
 
-	function _render_load_screen()
+	function _render_load_screen(progress)
 	{
+		if(typeof render_load_screen === "function") {
+			render_load_screen(progress);
+			return;
+		}
 		clear_canvas("#000");
 		set_font("16px monospace");
 		set_font_middle();
@@ -102,6 +106,7 @@ var _kernel_frames = 0;
 		if(!_all_loaded())
 		{
 			window.setTimeout(_ensure_loaded_then_start, 100);
+			_render_load_screen(0.0);
 		}
 		else
 		{
@@ -111,10 +116,10 @@ var _kernel_frames = 0;
 
 	window.addEventListener("load", function()
 	{
-		_render_load_screen();
 		init_keyboard();
 		mouse_init();
 		setup();
+		_render_load_screen(0.0);
 		window.setTimeout(_ensure_loaded_then_start, 100);
 	});
-//})();
+})();

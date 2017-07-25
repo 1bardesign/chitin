@@ -14,6 +14,10 @@
 function setup()
 {
 	/////////////////////////////////////////////
+	//setup the screen
+	init_canvas(480, 270);
+
+	/////////////////////////////////////////////
 	//setup the preloading
 
 	//network setup if applicable (get it going asap)
