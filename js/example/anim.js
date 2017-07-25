@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
-//	animation.js
+//	anim.js
 //
-//
+//		an example state showing off different ways of animating sprites
 //
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -17,9 +17,6 @@ AnimatedSpriteState.prototype.start = function() {
 
 	//basic physics
 	add_system("anim::transform", new TransformSystem(), 0);
-	//arbitrary behaviours
-	add_system("anim::state_machine", new StateMachineSystem());
-	add_system("anim::behaviour", new BehaviourSystem());
 	//animation
 	add_system("anim::anim", new AnimatorSystem());
 	//sprites in the foreground

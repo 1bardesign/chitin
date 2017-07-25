@@ -23,7 +23,7 @@ function setup()
 	//network setup if applicable (get it going asap)
 
 	//data files
-	load_file("map.csv");
+	//load_file("some_data_file.csv");
 
 	//load images
 	load_image("sprites", true, 8, 8, false);
@@ -38,9 +38,11 @@ var global_sm;
 function start()
 {
 	global_sm = new StateMachine();
+
 	global_sm.add_state("nbody", new NBodySimState());
 	global_sm.add_state("anim", new AnimatedSpriteState());
-	global_sm.set_state("anim");
+
+	global_sm.set_state("nbody");
 }
 
 function update()
