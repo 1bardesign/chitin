@@ -74,13 +74,15 @@ There is no global collection of all entities (unless you make one).
 
 There is no component-existance bitmask, and an entity can have many instances of the same type of component.
 
-Components (the built in ones at least) generally try to avoid going "through" the entity to find other data. They accept dependencies at creation time or through a setter. This makes the "as many of each component as you like" a lot easier. It is possible to access the entity though, which is handy when prototyping behaviours and your dependencies are in flux!
+Components (the built in ones at least) generally try to avoid going "through" the entity to find other data. They accept dependencies at creation time or through a setter. This makes the "as many of each component as you like" a lot easier. It is possible to access the entity though, which is handy when you are prototyping behaviours and your dependencies are in flux!
 
 There is no packed-table data structure - though I'm investigating possible implementations of something like it that would make component creation and deletion faster! It's a different ball game with javascript though.
 
-Systems (and components from that system) have string names which are used for creation, access, and destruction. JS is stringy so I've accepted that and tried to be very clear when and why an access fails (there's an alert if something's missing).
+Systems (and components from that system) have string names which are used for creation, access, and destruction. JS is stringy; I've accepted that and tried to be very clear when and why an access fails (there's an alert if something's missing).
 
-There are generic data store, behaviour, and state machine components for bolting ad-hoc behaviours onto an entity. The use of these is encouraged for throwaway code and prototyping, as it can easily be migrated to a dedicated component as and when needed. This is less rigid than a lot of documented component systems where every behaviour gets its own named, registered component.
+Systems can be created and destroyed while things are still running, so the mix of components available to entities can change on the fly. This allows only including and running what you need at any given time.
+
+There are generic behaviour and state machine components for bolting ad-hoc behaviours onto an entity. The use of these is encouraged for throwaway code and prototyping, as it can easily be migrated to a dedicated component as and when needed. This is less rigid than a lot of documented component systems where every behaviour gets its own named, registered component.
 
 # Built In Components
 
@@ -98,7 +100,7 @@ There are generic data store, behaviour, and state machine components for boltin
 
 - __Sprite__
 
-	Handles rendering a 2d sprite in space. Depth sorted, culled interactively, supports alpha blending.
+	Handles rendering a 2d sprite in space. Depth sorted, culled interactively, supports alpha blending and x/y flipping on appropriately configured images.
 
 - __Animation__
 
@@ -110,7 +112,7 @@ There are generic data store, behaviour, and state machine components for boltin
 
 - __Shape__
 
-	Comes in a few flavours (AABB and Circle at the moment) and describes some collidable geometry. Can be tested for overlap against other shapes and collisions between them resolved.
+	Comes in a few flavours (AABB and Circle at the moment) and describes some collidable geometry. Can be tested for overlap against other shapes, and collisions between them can be resolved.
 
 # Code Style - Not strictly enforced
 
