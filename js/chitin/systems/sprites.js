@@ -7,6 +7,91 @@
 //
 ///////////////////////////////////////////////////////////////////////////////
 
+function Sprite(args, transforms_from) {
+	//assign the image or asset (or missing)
+	this.image = image_from_args(args);
+
+	//size (default 0,0)
+	this.size = vec2_from_args(args, "size", "w", "h", 0, 0);
+	//cache halves
+	this.halfsize = this.size.smul(0.5);
+
+	//frame size (default size)
+	this.framesize = vec2_from_args(args, "framesize", "", "", this.size);
+
+	//frame position (default 0,0)
+	this.framepos = vec2_from_args(args, "framepos");
+
+	//depth (default 0)
+	this.z = scalar_from_args(args, "z", 0);
+
+	//flips (default false)
+	this.flipx = value_from_args(args, "flipx", false);
+	this.flipy = value_from_args(args, "flipy", false);
+
+	//assign the transform one way or another
+	if (args.transform !== undefined) {
+		//reference to transform
+		this.transform = args.transform;
+		this.own_transform = false;
+	} else {
+		//create own transform
+		this.own_transform = true;
+		if (args.x !== undefined && args.y !== undefined) {
+			//literal style position
+			this.transform = system_create_component(transforms_from, {pos: new vec2(args.x, args.y)});
+		} else if (args.pos !== undefined) {
+			//vector position
+			this.transform = system_create_component(transforms_from, {pos: args.pos});
+		} else if (args.copy_transform !== undefined) {
+			//copy transform values
+			this.transform = system_create_component(transforms_from, args.copy_transform);
+		} else {
+			//create blank transform
+			this.transform = system_create_component(transforms_from, {});
+		}
+	}
+}
+
+Sprite.prototype._width_in_frames = function(x, y) {
+	return this.image.width / this.framesize.x;
+}
+
+Sprite.prototype.get_frame_index = function() {
+	return this.get_frame_x() + (this.get_frame_y() * this._width_in_frames());
+}
+
+Sprite.prototype.get_frame_x = function() {
+	return this.framepos.x / this.framesize.x;
+}
+
+Sprite.prototype.get_frame_y = function() {
+	return this.framepos.y / this.framesize.y;
+}
+
+Sprite.prototype.set_frame_x = function(x) {
+	this.framepos.x = Math.floor(x) * this.framesize.x;
+}
+
+Sprite.prototype.set_frame_y = function(y) {
+	this.framepos.y = Math.floor(y) * this.framesize.y;
+}
+
+Sprite.prototype.set_frame_xy = function(x, y) {
+	this.set_frame_x(x);
+	this.set_frame_y(y);
+}
+
+Sprite.prototype.set_frame_index = function(i) {
+	var width_in_frames = this._width_in_frames();
+	var y = (i / width_in_frames);
+	var x = (i % width_in_frames);
+
+	this.set_frame_xy(x, y);
+}
+
+//system
+
 function SpriteSystem(transforms_from, screen_space) {
 	this.transforms_from = transforms_from;
 	this.screen_space = screen_space;
@@ -15,51 +100,7 @@ function SpriteSystem(transforms_from, screen_space) {
 }
 
 SpriteSystem.prototype.create_component = function(args) {
-	var c = {};
-	//assign the image or asset (or missing)
-	c.image = image_from_args(args);
-
-	//size (default 0,0)
-	c.size = vec2_from_args(args, "size", "w", "h", 0, 0);
-	//cache halves
-	c.halfsize = c.size.smul(0.5);
-
-	//frame size (default size)
-	c.framesize = vec2_from_args(args, "framesize", "", "", c.size);
-
-	//frame position (default 0,0)
-	c.framepos = vec2_from_args(args, "framepos");
-
-	//depth (default 0)
-	c.z = scalar_from_args(args, "z", 0);
-
-	//flips (default false)
-	c.flipx = value_from_args(args, "flipx", false);
-	c.flipy = value_from_args(args, "flipy", false);
-
-	//assign the transform one way or another
-	if (args.transform !== undefined) {
-		//reference to transform
-		c.transform = args.transform;
-		c.own_transform = false;
-	} else {
-		//create own transform
-		c.own_transform = true;
-		if (args.x !== undefined && args.y !== undefined) {
-			//literal style position
-			c.transform = system_create_component(this.transforms_from, {pos: new vec2(args.x, args.y)});
-		} else if (args.pos !== undefined) {
-			//vector position
-			c.transform = system_create_component(this.transforms_from, {pos: args.pos});
-		} else if (args.copy_transform !== undefined) {
-			//copy transform values
-			c.transform = system_create_component(this.transforms_from, args.copy_transform);
-		} else {
-			//create blank transform
-			c.transform = system_create_component(this.transforms_from, {});
-		}
-	}
-
+	var c = new Sprite(args, this.transforms_from);
 	this._c.push(c);
 	return c;
 }

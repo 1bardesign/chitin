@@ -84,35 +84,37 @@ There are generic data store, behaviour, and state machine components for boltin
 
 # Built In Components
 
-- ### Behaviour
+- __Behaviour__
 
-	For any one-off behaviour per-entity.
+	For any one-off behaviour per-entity. Technically everything "could" be a behaviour like this, but more well defined components are best split out to their own systems, and given names.
 
-	Technically everything "could" be a behaviour like this, but more well defined components are best split out to their own systems, and given names.
-
-- ### StateMachine
+- __StateMachine__
 
 	Handles state-machine-like behaviours - commonly used for global "gamestate" type entities and AI.
 
-- ### Transform
+- __Transform__
 
-	Handles a 2d point in space; has a position, velocity, acceleration, angle and angular velocity which are all integrated each frame.
+	Handles a 2d point in space; has a position, velocity, acceleration, angle and angular velocity which are all integrated each frame. Used to position many other components.
 
-- ### Sprite
+- __Sprite__
 
-	Handles rendering a 2d sprite in space. depth sorted.
+	Handles rendering a 2d sprite in space. Depth sorted, culled interactively, supports alpha blending.
 
-- ### Animation
+- __Animation__
 
 	Handles animating some property at a framerate independent of the game framerate - comes with a few specialisations to animate sprite frames.
 
-- ### Tilemap
+- __Tilemap__
 
-	handles rendering a 2d map of images
+	Handles rendering and interacting with a regular 2d map of images. Commonly used for level rendering.
+
+- __Shape__
+
+	Comes in a few flavours (AABB and Circle at the moment) and describes some collidable geometry. Can be tested for overlap against other shapes and collisions between them resolved.
 
 # Code Style - Not strictly enforced
 
-1TBS for some consistency with the rest of JS.
+1TBS is used for some consistency with the rest of JS.
 
 `UpperCamel` for types. `lower_slugs` for functions and variables.
 
@@ -129,7 +131,7 @@ if(condition) {
 
 # Project TODO
 
-A list of tasks on the agenda - hopefully in constant flux! There are also minor `//todo:` notes scattered around the codebase.
+A list of tasks on the agenda - hopefully in constant flux! There are also minor `//todo:` notes scattered around the codebase to check up on from time to time.
 
 ### Major:
 
@@ -143,12 +145,8 @@ A list of tasks on the agenda - hopefully in constant flux! There are also minor
 	- between objects
 	- vs tilemap
 	- vs advanced tilemap (tile -> shape mapping)
-- some sort of grouping system
-	- especially for collision/overlap stuff
-	- foreach-style ops
-	- mass destruction
 - parent/child system
-	- common, transform linking
+	- common, transform linking with an offset
 - owner system
 	- useful for damage, collision filtering and netcode
 - verlet?
@@ -157,9 +155,8 @@ A list of tasks on the agenda - hopefully in constant flux! There are also minor
 	- transform
 	- constraints
 	- grouping to bodies
-- tri renderer
-- networking infrastructure
-- webgl renderer?
+- tri renderer (webgl? would require reimplementation of a lot of the core stuff...)
+- boilerplate networking infrastructure (messaging, multicast etc)
 
 ### Minor/Implementation:
 

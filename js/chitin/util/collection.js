@@ -37,13 +37,23 @@ Group.prototype.destroy_all = function() {
 	}
 }
 
+//(I'm conflicted about this because forEach is in most browsers
+// and "works" but is reported as much slower than this loop in some
+// places and chitin naming is inconsistent with builtins..)
+Group.prototype.foreach = function(f) {
+	for(var i = 0; i < this.length; i++) {
+		f(this[i]);
+	}
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 //
 //	Object Pool
 //
 //		simple object pooling in an array
 //		can be used to avoid gc strain if you're happy doing memory
-//		management yourself.
+//		management yourself. Make sure you measure that this is
+//		a real problem before complicating things.
 //
 //		accepts an optional type (pushed objects are checked) and
 //		a flag to indicate if the type is default-constructable
