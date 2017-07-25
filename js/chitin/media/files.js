@@ -104,3 +104,45 @@ function load_file(name)
 
 	return file;
 }
+
+//contents parsing helpers
+
+//csv
+//	handles converting a csv file into a 2d array
+//	including removing blank lines
+//args:
+//	raw: true to not trim or process each line and element
+//	parse_numbers; true to run everything through Number()
+//	parse_ints; true to run everything through parseInt()
+function csv_to_2d_array(contents, args) {
+	if(args === undefined) {
+		args = {};
+	}
+	var lines = contents.split("\n");
+	for(var i = 0; i < lines.length; i++) {
+		if(args.raw !== true) {
+			lines[i] = lines[i].trim();
+		}
+		//blank line?
+		if(lines[i] == "" || lines[i] == "\r") {
+			//remove
+			lines.splice(i, 1);
+			i--;
+			continue;
+		}
+		lines[i] = lines[i].split(",");
+		if(args.raw !== true) {
+			for(var j = 0; j < lines[i].length; j++) {
+				if(args.parse_numbers === true) {
+					lines[i][j] = Number(lines[i][j]);
+				} else if(args.parse_ints === true) {
+					lines[i][j] = parseInt(lines[i][j]);
+				} else {
+					lines[i][j] = lines[i][j].trim();
+				}
+			}
+		}
+	}
+	return lines;
+}
+
