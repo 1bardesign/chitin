@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title></title>
+	<style type="text/css">
+	body, html {
+		/*invisible in iframe*/
+		background:none transparent;
+		padding: 0px;
+		margin: 0px;
+		overflow: hidden;
+	}
+	#canvas {
+		/* right in the corner */
+		position: absolute;
+		/* pixelated */
+		image-rendering: -moz-crisp-edges;
+		image-rendering: -o-crisp-edges;
+		image-rendering: -webkit-optimize-contrast;
+		image-rendering: pixelated;
+		image-rendering: crisp-edges;
+		-ms-interpolation-mode: nearest-neighbor;
+	}
+	</style>
+
+	<!-- utility stuff -->
+	<script src="./js/chitin/util/util.js"></script>
+	<script src="./js/chitin/util/vector.js"></script>
+	<script src="./js/chitin/util/collection.js"></script>
+	<!-- media stuff -->
+	<script src="./js/chitin/media/canvas.js"></script>
+	<script src="./js/chitin/media/camera.js"></script>
+	<script src="./js/chitin/media/files.js"></script>
+	<script src="./js/chitin/media/images.js"></script>
+	<script src="./js/chitin/media/audio.js"></script>
+	<!-- engine stuff -->
+	<script src="./js/chitin/core/mouse.js"></script>
+	<script src="./js/chitin/core/keyboard.js"></script>
+	<script src="./js/chitin/core/system.js"></script>
+	<script src="./js/chitin/core/entity.js"></script>
+	<script src="./js/chitin/core/kernel.js"></script>
+	<script src="./js/chitin/core/debug.js"></script>
+	<!-- systems stuff -->
+	<script src="./js/chitin/systems/basics.js"></script>
+	<script src="./js/chitin/systems/transform.js"></script>
+	<script src="./js/chitin/systems/sprites.js"></script>
+	<script src="./js/chitin/systems/tilemap.js"></script>
+	<script src="./js/chitin/systems/physics.js"></script>
+	<!-- game stuff -->
+	<script src="./js/main.js"></script>
+	<script src="./js/nbody.js"></script>
+
+</head>
+<body>
+	<canvas id="canvas" width="480" height="270"></canvas>
+	<script type="text/javascript">
+		//handle scaling the canvas to fit its parent exactly
+		//or else take on the "default" pixel ratio given
+		(function () {
+			var c = document.getElementById('canvas');
+			//preserve this
+			var aspect = c.width / c.height;
+			var p = c.parentNode;
+			if(p) {
+				if (p !== document.body) {
+					//parent is some actual element
+					w = p.clientWidth;
+					h = p.clientHeight;
+				} else {
+					//parent is the whole document, fit to "screen"
+					w = window.innerWidth;
+					h = window.innerHeight;
+				}
+			}
+			c.style.width = ""+w+"px";
+			c.style.height = ""+h+"px";
+		})();
+	</script>
+</body>
+</html>

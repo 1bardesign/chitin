@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>Chitin Framework Demos</title>
+	<style type="text/css">
+	body {
+		background-color: black;
+		font-family: monospace;
+		color: #ead9d7;
+	}
+	#container {
+		width: 1000px;
+		margin-left: auto;
+		margin-right: auto;
+		margin-top: 20px;
+		margin-bottom: 20px;
+		padding: 20px;
+		background-color: #1e1817
+	}
+	iframe {
+		border: 0;
+		margin-left: auto;
+		margin-right: auto;
+		display: block;
+	}
+	h1 {
+		font-size: 32px;
+	}
+	p {
+		font-size: 16px;
+	}
+	hr {
+		border: 0px;
+		height: 1px;
+		background-color: #3e3837;
+	}
+	.quote {
+		padding-left: 30px;
+	}
+	</style>
+</head>
+<body>
+<div id="container">
+	<iframe id="game_frame" src="game_frame.html" width="960px" height="540px" allowtransparency="true"></iframe>
+	<script type="text/javascript">
+		//force-focus the iframe 50ms after load;
+		//gives the browser time to put something there to focus
+		window.addEventListener("load", function() {
+			setTimeout(function () {
+				document.getElementById("game_frame").contentWindow.focus();
+			}, 50);
+		});
+	</script>
+	<h1 align="center">chitin - an interactive web framework</h1>
+	<hr>
+	<p>What is it?</p>
+	<hr>
+	<div class="quote">
+		<p>Chitin is a javascript entity-component-system for game and interactive media development.</p>
+		<p>Chitin provides sane elementary building blocks for multimedia development, and provides workarounds and solutions for many common browser inconsistencies and inconveniences. It is designed to simplify getting a project off the ground while keeping things sustainable for longer development.</p>
+		<p>However, Chitin is in heavy development; widespread consumption is not recommended just yet!</p>
+	</div>
+	<hr>
+	<p>Common Issues:</p>
+	<hr>
+	<div class="quote">
+		<p>If the game doesn't respond to key presses, try clicking into the game "window" before pressing keys.</p>
+		<p>If the game doesn't run at all, you likely either need a better browser (try firefox or chrome for best compatibility), or to enable javascript.</p>
+		<p>No sound on Safari: take it up with Apple, Vorbis is free/open.</p>
+	</div>
+	<hr>
+	<p align="right">1BarDesign 2017</p>
+</div>
+</body>
+</html>
