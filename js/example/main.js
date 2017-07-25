@@ -39,12 +39,28 @@ function start()
 {
 	global_sm = new StateMachine();
 	global_sm.add_state("nbody", new NBodySimState());
-	global_sm.set_state("nbody");
+	global_sm.add_state("anim", new AnimatedSpriteState());
+	global_sm.set_state("anim");
 }
 
 function update()
 {
 	update_systems();
+
+	//state machine management
+	if(key_just_pressed("r")) {
+		//reset state
+		global_sm.reset();
+	}
+	var key_to_state = {
+		a: "anim",
+		n: "nbody"
+	}
+	for (var button in key_to_state) {
+		if(key_just_pressed(button)) {
+			global_sm.set_state(key_to_state[button]);
+		}
+	}
 	global_sm.update();
 }
 

@@ -17,16 +17,14 @@ NBodySimState.prototype.start = function() {
 	//set up the game systems
 
 	//basic physics
-	add_system("transform", new TransformSystem());
+	add_system("nbody::transform", new TransformSystem(), 0);
 	//arbitrary behaviours
-	add_system("state_machine", new StateMachineSystem());
-	add_system("behaviour", new BehaviourSystem());
+	add_system("nbody::state_machine", new StateMachineSystem());
+	add_system("nbody::behaviour", new BehaviourSystem());
 	//(physics)
-	add_system("tilemap", new TilemapSystem());
-	//tilemap behind sprites
-	add_system("collide", new ShapeOverlapSystem());
+	add_system("nbody::collide", new ShapeOverlapSystem());
 	//sprites in the foreground
-	add_system("sprite", new SpriteSystem("transform", false));
+	add_system("nbody::sprite", new SpriteSystem("nbody::transform", false));
 
 	//shared groups
 	var temp_ents = new Group();
@@ -116,11 +114,11 @@ NBodySimState.prototype.start = function() {
 		a.transform.vel.addi(_grv_t);
 	}
 
-	system("collide").add_group(shapes, overlapped_particles);
+	system("nbody::collide").add_group(shapes, overlapped_particles);
 
 	for(var i = 0; i < 100; i++)
 	{
-		var e = new Entity();
+		var e = new Entity("nbody");
 
 		var transform = e.add("transform");
 		transform.vel.set(Math.random(), 0).smuli(10).rotli(Math.random() * Math.PI * 2);
@@ -157,19 +155,11 @@ NBodySimState.prototype.start = function() {
 
 NBodySimState.prototype.end = function() {
 	//tear down the game systems
-	remove_system("transform");
-	remove_system("state_machine");
-	remove_system("behaviour");
-	remove_system("tilemap");
-	remove_system("collide");
-	remove_system("sprite");
+	remove_systems_matching("nbody::");
 }
 
 NBodySimState.prototype.update = function() {
-	if(key_just_pressed("r")) {
-		//reset
-		global_sm.set_state("nbody");
-	}
+
 }
 
 NBodySimState.prototype.render = function() {

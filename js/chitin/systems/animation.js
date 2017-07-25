@@ -7,7 +7,8 @@
 //
 ///////////////////////////////////////////////////////////////////////////////
 
-//generic animation
+//animator component
+//handles updating and swapping between animations
 
 function Animator(data) {
 	//init
@@ -43,6 +44,10 @@ Animator.prototype.set = function(name) {
 
 Animator.prototype.reset = function() {
 	this.current_time = 0;
+	var anim = this.playing();
+	if(anim == undefined) {
+		return;
+	}
 	anim.start(this.data);
 }
 
@@ -53,14 +58,13 @@ Animator.prototype.playing = function() {
 	return this.animations[this.current_animation_name];
 }
 
-Animator.prototype.update = function(_dt) {
+Animator.prototype.fast_forward = function(time) {
 	if(this.action_every == 0) {
 		return;
 	}
-	if(_dt === undefined) {
-		_dt = dt();
-	}
-	this.current_time += _dt;
+	this.current_time += time;
+	//todo: let animations report wrap and clamp times
+	//		to avoid looping forward here
 	while(this.current_time >= this.action_every) {
 		this.current_time -= this.action_every;
 		var anim = this.playing();
@@ -70,62 +74,95 @@ Animator.prototype.update = function(_dt) {
 	}
 }
 
+Animator.prototype.scrub_to = function(time) {
+	this.reset();
+	this.fast_forward(time);
+}
+
+Animator.prototype.update = function(_dt) {
+	if(_dt === undefined) {
+		_dt = dt();
+	}
+	this.fast_forward(_dt);
+}
+
+Animator.prototype.finished = function() {
+	if(this.action_every == 0) {
+		return true;
+	}
+	var anim = this.playing();
+	if(anim !== undefined && typeof anim.finished === "function") {
+		return anim.finished(this.data);
+	}
+	return true;
+}
+
 //built in animation types
 
 //1d frame index animation
 
-function FrameAnimation1D(frames, loop) {
+function FrameIndexAnimation(fps, frames, loop) {
+	this.fps = fps;
 	this.frames = frames;
 	this.loop = loop;
 	return this;
 }
 
-FrameAnimation1D.prototype.set_frame = function(data) {
+FrameIndexAnimation.prototype._write_frame = function(data) {
 	data.sprite.set_frame_index(this.frames[data.index]);
 }
 
-FrameAnimation1D.prototype.start = function(data) {
+FrameIndexAnimation.prototype.start = function(data) {
 	data.index = 0;
-	set_frame();
+	this._write_frame(data);
 }
 
-FrameAnimation1D.prototype.update = function(data) {
-	if(data.index == this.frames.length - 1) {
-		if(loop) {
+FrameIndexAnimation.prototype.update = function(data) {
+	if(this.finished(data)) {
+		if(this.loop) {
 			data.index = 0;
 		}
 	} else {
 		data.index++;
 	}
-	set_frame();
+	this._write_frame(data);
+}
+
+FrameIndexAnimation.prototype.finished = function(data) {
+	return data.index >= this.frames.length - 1;
 }
 
 //2d x,y frame animation
 
-function FrameAnimation2D(frames, loop) {
+function FrameXYAnimation(fps, frames, loop) {
+	this.fps = fps;
 	this.frames = frames;
 	this.loop = loop;
 	return this;
 }
 
-FrameAnimation2D.prototype.set_frame = function(data) {
+FrameXYAnimation.prototype._write_frame = function(data) {
 	data.sprite.set_frame_xy(this.frames[data.index], this.frames[data.index+1]);
 }
 
-FrameAnimation2D.prototype.start = function(data) {
+FrameXYAnimation.prototype.start = function(data) {
 	data.index = 0;
-	set_frame();
+	this._write_frame(data);
 }
 
-FrameAnimation2D.prototype.update = function(data) {
-	if(data.index >= this.frames.length - 2) {
-		if(loop) {
+FrameXYAnimation.prototype.update = function(data) {
+	if(this.finished(data)) {
+		if(this.loop) {
 			data.index = 0;
 		}
 	} else {
 		data.index += 2;
 	}
-	set_frame();
+	this._write_frame(data);
+}
+
+FrameXYAnimation.prototype.finished = function(data) {
+	return data.index >= this.frames.length - 2;
 }
 
 //system for updating animators

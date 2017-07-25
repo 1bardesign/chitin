@@ -113,7 +113,7 @@ function add_system(name, sys, order) {
 	reorder_systems();
 }
 
-// remove a system from the registry - honestly pretty rare to do so
+// remove a system from the registry
 function remove_system(name) {
 	//check that it exists
 	var sys = system(name);
@@ -127,6 +127,22 @@ function remove_system(name) {
 	//remove it from the sytems registry and rebuild the order cache
 	delete _systems[name];
 	reorder_systems();
+}
+
+// remove all matching systems from the registry, usually used to
+// wipe out namespaces
+function remove_systems_matching(name_frag) {
+	//check that it exists
+	var matching = [];
+	for(var name in _systems) {
+		if(name.indexOf(name_frag) != -1) {
+			matching.push(name);
+		}
+	}
+	while(matching.length > 0){
+		var name = matching.pop();
+		remove_system(name);
+	}
 }
 
 // enable a system - it will be updated or rendered from now on

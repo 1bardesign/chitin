@@ -256,5 +256,6 @@ StateMachineSystem.prototype.render = function() {
 	for(var i = 0; i < this._c.length; i++) {
 		this._c[i].render();
 	}
+	push_debug_msg("State Machines : "+this._c.length);
 }
 

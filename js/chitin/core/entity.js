@@ -12,6 +12,10 @@
 //
 //	entity-global properties are best stored in the properties (p) object
 //
+//	entities can be optionally namespaced - this lets them be conveniently
+//	isolated to a set of systems that can be cleaned up in one fell swoop
+//	which is very convenient for separating game and ui, for example.
+//
 ///////////////////////////////////////////////////////////////////////////////
 
 "use strict"
@@ -24,7 +28,13 @@ function Entity(namespace) {
 	this._components = {};
 	this.p = {};
 	if(namespace !== undefined && namespace.length > 0) {
-		this.namespace = "::" + namespace + "::";
+		this.namespace = namespace;
+		if(this.namespace.substr(-2) != "::") {
+			this.namespace = this.namespace + "::";
+		}
+		if(this.namespace.substr(0,2) != "::") {
+			this.namespace = this.namespace;
+		}
 	} else {
 		this.namespace = "";
 	}
@@ -32,11 +42,17 @@ function Entity(namespace) {
 	return this;
 }
 
-//
+//get the global name relative to this entity's namespace
 Entity.prototype._namespaced = function(name) {
-	if(this.namespace.length == 0 ||(name.charAt(0) == ":" && name.charAt(1) == ":")) {
+	//escaped namespace?
+	if(name.charAt(0) == ":" && name.charAt(1) == ":") {
+		return name.substr(2);
+	}
+	//dont append if unnecessary
+	if(this.namespace.length == 0) {
 		return name;
 	}
+	//otherwise join em up
 	return this.namespace + name;
 }
 
@@ -102,8 +118,8 @@ Entity.prototype.add = function(name, args) {
 		//todo: consider making this some internal recycled object?
 		args = {};
 	}
-	name = this._namespaced(name);
-	var comp = system_create_component(name, args);
+	var global_name = this._namespaced(name);
+	var comp = system_create_component(global_name, args);
 	if(comp === null) {
 		return null;
 	}
