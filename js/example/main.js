@@ -2,10 +2,7 @@
 //
 //	main.js
 //
-//		canonical home for setup(), start(), update() and render()
-//		normal implementation is to choose and initialise your systems here,
-//		then handle any game-global initialisation, and finally pass control
-//		off to a game state for actual game logic.
+//		chitin demos main file
 //
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -14,13 +11,11 @@
 function setup()
 {
 	/////////////////////////////////////////////
-	//setup the screen
+	//screen setup
 	init_canvas(480, 270);
 
 	/////////////////////////////////////////////
-	//setup the preloading
-
-	//network setup if applicable (get it going asap)
+	//preloading/system startup
 
 	//data files
 	//load_file("some_data_file.csv");

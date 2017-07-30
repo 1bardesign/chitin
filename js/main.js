@@ -14,11 +14,11 @@
 function setup()
 {
 	/////////////////////////////////////////////
-	//setup the screen
+	//screen setup
 	init_canvas(480, 270);
 
 	/////////////////////////////////////////////
-	//setup preloading
+	//preloading/system startup
 
 	//(recommended ordering)
 
