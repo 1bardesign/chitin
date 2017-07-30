@@ -9,6 +9,8 @@
 
 //animator component
 //handles updating and swapping between animations
+//todo: animator timescale
+//todo: support reverse animations?
 
 function Animator(data) {
 	//init
@@ -163,6 +165,39 @@ FrameXYAnimation.prototype.update = function(data) {
 
 FrameXYAnimation.prototype.finished = function(data) {
 	return data.index >= this.frames.length - 2;
+}
+
+//sprite frame position animation
+
+function FrameposAnimation(fps, frames, loop) {
+	this.fps = fps;
+	this.frames = frames;
+	this.loop = loop;
+	return this;
+}
+
+FrameposAnimation.prototype._write_frame = function(data) {
+	data.sprite.framepos.vset(this.frames[data.index]);
+}
+
+FrameposAnimation.prototype.start = function(data) {
+	data.index = 0;
+	this._write_frame(data);
+}
+
+FrameposAnimation.prototype.update = function(data) {
+	if(this.finished(data)) {
+		if(this.loop) {
+			data.index = 0;
+		}
+	} else {
+		data.index++;
+	}
+	this._write_frame(data);
+}
+
+FrameposAnimation.prototype.finished = function(data) {
+	return data.index >= this.frames.length - 1;
 }
 
 //system for updating animators
