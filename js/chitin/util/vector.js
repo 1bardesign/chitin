@@ -171,7 +171,8 @@ vec2.prototype.length_squared = function() {
 }
 
 vec2.prototype.length = function() {
-	return Math.sqrt(this.x * this.x + this.y * this.y); //(saves a call over using length_squared)
+	//(saves a call over using length_squared)
+	return Math.sqrt(this.x * this.x + this.y * this.y);
 }
 
 vec2.prototype.distance_squared = function(other) {
@@ -207,6 +208,16 @@ vec2.prototype.normalised = function() {
 
 vec2.prototype.normalise = function() {
 	return this.normalisei(this);
+}
+
+//inverse
+
+vec2.prototype.inversei = function() {
+	return this.smuli(-1);
+}
+
+vec2.prototype.inverse = function() {
+	return this.inversei(new vec2(0));
 }
 
 //abs, minmax, clamp
