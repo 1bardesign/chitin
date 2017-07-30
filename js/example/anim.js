@@ -62,6 +62,7 @@ AnimatedSpriteState.prototype.start = function() {
 
 		anim.set(Math.random() < 0.5 ? "index" : "xy");
 		anim.scrub_to(Math.random() * 10);
+		anim.set_timescale(0.5 + Math.random() * 19.5);
 
 		ents.push(e);
 	}

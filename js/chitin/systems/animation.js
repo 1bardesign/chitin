@@ -9,7 +9,6 @@
 
 //animator component
 //handles updating and swapping between animations
-//todo: animator timescale
 //todo: support reverse animations?
 
 function Animator(data) {
@@ -19,6 +18,7 @@ function Animator(data) {
 	//timing
 	this.current_time = 0;
 	this.action_every = 0;
+	this.timescale = 1;
 	//shared data
 	this.data = data;
 	return this;
@@ -85,7 +85,7 @@ Animator.prototype.update = function(_dt) {
 	if(_dt === undefined) {
 		_dt = dt();
 	}
-	this.fast_forward(_dt);
+	this.fast_forward(_dt * this.timescale);
 }
 
 Animator.prototype.finished = function() {
@@ -97,6 +97,10 @@ Animator.prototype.finished = function() {
 		return anim.finished(this.data);
 	}
 	return true;
+}
+
+Animator.prototype.set_timescale = function(scale) {
+	this.timescale = Math.max(0, scale);
 }
 
 //built in animation types
