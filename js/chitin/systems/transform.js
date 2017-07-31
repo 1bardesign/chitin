@@ -13,6 +13,21 @@
 
 "use strict"
 
+//
+
+function Transform(args) {
+	if(args === undefined) args = {}
+
+	this.pos = new vec2(args.pos);
+	this.vel = new vec2(args.vel);
+	this.acc = new vec2(args.acc);
+	this.ang = (args.ang === undefined ? 0 : args.ang);
+	this.avel = (args.avel === undefined ? 0 : args.avel);
+	return this;
+}
+
+//
+
 function TransformSystem() {
 	this._c = [];
 	//temp storage to avoid gc
@@ -41,12 +56,7 @@ TransformSystem.prototype.create_component = function(args) {
 	//we could use the args as the component directly
 	//but then re-using args would create duplicate references
 	//so we copy the args out here
-	var c = {};
-	c.pos = new vec2(args.pos);
-	c.vel = new vec2(args.vel);
-	c.acc = new vec2(args.acc);
-	c.ang = (args.ang === undefined ? 0 : args.ang);
-	c.avel = (args.avel === undefined ? 0 : args.avel);
+	var c = new Transform(args);
 	//and put it in the system
 	this._c.push(c);
 	return c;
