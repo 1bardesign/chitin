@@ -101,11 +101,11 @@ NBodySimState.prototype.start = function() {
 		//set the frame that we collided
 		var as = a.e.c("sprite", 0);
 		if(as) {
-			as.framepos.x = Math.min(112, as.framepos.x + 8);
+			as.framepos.x = Math.min(120, as.framepos.x + 8);
 		}
 		var as = a.e.c("sprite", 1);
 		if(as) {
-			as.framepos.x = Math.min(112, as.framepos.x + 8);
+			as.framepos.x = Math.min(120, as.framepos.x + 8);
 			as.z++;
 		}
 		//apply some drag
@@ -114,7 +114,7 @@ NBodySimState.prototype.start = function() {
 		a.transform.vel.addi(_grv_t);
 	}
 
-	system("nbody::collide").add_group(shapes, overlapped_particles);
+	system("nbody::collide").add_group_callback_separate(shapes, overlapped_particles);
 
 	for(var i = 0; i < 100; i++)
 	{
@@ -129,17 +129,17 @@ NBodySimState.prototype.start = function() {
 		e.add("behaviour", new nbody_gravity(transform, transforms));
 
 		e.add("sprite", {
-			asset: "sprites",
+			asset: "nbody",
 			w: 8, h: 8,
 			transform: transform,
-			framepos: new vec2(0,24),
+			framepos: new vec2(0,0),
 			z: -1
 		});
 		e.add("sprite", {
-			asset: "sprites",
+			asset: "nbody",
 			w: 8, h: 8,
 			transform: transform,
-			framepos: new vec2(0,32)
+			framepos: new vec2(0,8)
 		});
 
 		var shape = e.add(

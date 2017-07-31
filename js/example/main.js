@@ -21,7 +21,8 @@ function setup()
 	//load_file("some_data_file.csv");
 
 	//load images
-	load_image("sprites", true, 8, 8, false);
+	load_image("sprites", false);
+	load_image("nbody", false);
 
 	//audio setup
 	set_volume(0.5);
@@ -36,8 +37,9 @@ function start()
 
 	global_sm.add_state("nbody", new NBodySimState());
 	global_sm.add_state("anim", new AnimatedSpriteState());
+	global_sm.add_state("tmc", new TilemapCollisionState());
 
-	global_sm.set_state("nbody");
+	global_sm.set_state("tmc");
 }
 
 function update()
@@ -51,6 +53,7 @@ function update()
 	}
 	var key_to_state = {
 		a: "anim",
+		t: "tmc",
 		n: "nbody"
 	}
 	for (var button in key_to_state) {
