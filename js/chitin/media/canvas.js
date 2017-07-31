@@ -18,10 +18,16 @@ function init_canvas(width, height) {
 	if(cnv.width != width || cnv.height != height) {
 		cnv.width = width;
 		cnv.height = height;
-		cnv.imageSmoothingEnabled = false;
 	}
 	//now we can render into it
 	ctx = cnv.getContext("2d", {alpha: false});
+
+	//disable smoothing for up/downscaling
+	ctx.imageSmoothingEnabled = false;
+	//(various prefixed browser support)
+	if(ctx.hasOwnProperty("mozImageSmoothingEnabled")) 		ctx.mozImageSmoothingEnabled = false;
+	if(ctx.hasOwnProperty("webkitImageSmoothingEnabled")) 	ctx.webkitImageSmoothingEnabled = false;
+	if(ctx.hasOwnProperty("msImageSmoothingEnabled")) 		ctx.msImageSmoothingEnabled = false;
 }
 
 function get_canvas() {
