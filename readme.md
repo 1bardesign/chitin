@@ -137,14 +137,19 @@ A list of tasks on the agenda - hopefully in constant flux! There are also minor
 
 ### Major:
 
+- demos (beetle themed)
+	- animation (walking left and right, jumping, flipping)
+	- platformer (demo level with doors, keys, pickups, enemy)
+	- top-down (demo level with grass to cut, pickups, attacking, enemy, jumping over holes, multiple screens?)
+	- particle (spawners, colliding vs tilemap and colliders, animations, rotating gibs, fade out)
+	- collisions (group a vs group b; stacking stability; tilemap)
+	- nbody (crafting specific behaviours)
 - animation prefabs
-	- framepos
 	- framepos+framesize
+	- offset animation
 	- animate value?
 - collision detection/resolution
-	- circle, aabb, line/capsule, SAT
-	- between objects
-	- vs tilemap
+	- line/capsule, SAT
 	- vs advanced tilemap (tile -> shape mapping)
 - parent/child system
 	- transform linking with an offset
