@@ -35,15 +35,19 @@ TilemapCollisionState.prototype.start = function() {
 
 	//load and build the tilemap
 	tiles.load_csv(
-		"1,1,1,1,1,1,1,1,1\n"+
-		"1,0,0,0,0,0,0,0,1\n"+
-		"1,0,1,1,0,0,0,0,1\n"+
-		"1,0,1,0,0,0,0,0,1\n"+
-		"1,0,0,0,0,0,0,0,1\n"+
-		"1,0,1,0,0,0,1,0,1\n"+
-		"1,0,1,1,1,1,1,0,1\n"+
-		"1,0,0,0,0,0,0,0,1\n"+
-		"1,1,1,1,1,1,1,1,1"
+		"1,1,1,1,1,1,1,1,1,1,1,1,1\n"+
+		"1,0,0,0,0,0,0,0,0,0,0,0,1\n"+
+		"1,0,0,0,0,0,0,0,0,0,0,0,1\n"+
+		"1,0,0,0,0,0,0,0,0,0,0,0,1\n"+
+		"1,0,0,0,1,1,0,0,0,0,0,0,1\n"+
+		"1,0,0,0,1,0,0,0,0,0,0,0,1\n"+
+		"1,0,0,0,0,0,0,0,0,0,0,0,1\n"+
+		"1,0,0,0,1,0,0,0,1,0,0,0,1\n"+
+		"1,0,0,0,1,1,1,1,1,0,0,0,1\n"+
+		"1,0,0,0,0,0,0,0,0,0,0,0,1\n"+
+		"1,0,0,0,0,0,0,0,0,0,0,0,1\n"+
+		"1,0,0,0,0,0,0,0,0,0,0,0,1\n"+
+		"1,1,1,1,1,1,1,1,1,1,1,1,1"
 	);
 	//centre the tilemap
 	tiles.transform.pos.sset(
@@ -58,6 +62,8 @@ TilemapCollisionState.prototype.start = function() {
 	var transforms = new Group();
 	var shapes = new Group();
 
+	set_resolve_scale(0.5);
+	system("tmc::collide").add_group_collide(shapes, callback_resolve);
 	system("tmc::collide").add_tilemap_vs_group(tiles, shapes, 1);
 
 	function walk_transform(transform) {
@@ -86,12 +92,12 @@ TilemapCollisionState.prototype.start = function() {
 		this.transform.vel.vset(_walk);
 	}
 
-	for(var i = 0; i < 1; i++)
+	for(var i = 0; i < 50; i++)
 	{
 		var e = new Entity("tmc");
 
 		var transform = e.add("transform");
-		transform.pos.set(0, 0);
+		transform.pos.sset(Math.random() * 40, 0).rotli(Math.random()*Math.PI*2);
 		transforms.add(transform);
 
 		e.add("behaviour", new walk_transform(transform));

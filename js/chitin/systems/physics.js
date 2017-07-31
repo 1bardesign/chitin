@@ -176,8 +176,13 @@ function _msv_circle_circle(a, b, into) {
 }
 
 function _msv_circle_aabb(a, b, into) {
-	var d = a.transform.pos.sub(b.transform.pos);
-	var ad = d.abs();
+	//alloc
+	var d = _phys_temps.vpool.pop();
+	var ad = _phys_temps.vpool.pop();
+	//load
+	d.vset(a.transform.pos).subi(b.transform.pos);
+	d.absi(ad);
+	//compare
 	if(ad.x < b.halfsize.x || ad.y < b.halfsize.y) {
 		//inside edge region - aabb
 		var _temp = _phys_temps.shapes.aabb;
@@ -198,6 +203,10 @@ function _msv_circle_aabb(a, b, into) {
 
 		_msv_circle_circle(a, _temp, into);
 	}
+	//free
+	_phys_temps.vpool.push(d);
+	_phys_temps.vpool.push(ad);
+
 	return into;
 }
 
@@ -635,6 +644,32 @@ ShapeOverlapSystem.prototype.add_groups_callback_together = function(group_a, gr
 	});
 }
 
+ShapeOverlapSystem.prototype.add_pair_collide = function(a, b, callback) {
+	this._work.push({
+		type: "pair_collide",
+		a: a,
+		b: b,
+		callback: callback
+	});
+}
+
+ShapeOverlapSystem.prototype.add_group_collide = function(group, callback) {
+	this._work.push({
+		type: "single_collide",
+		group: group,
+		callback: callback
+	});
+}
+
+ShapeOverlapSystem.prototype.add_groups_collide = function(group_a, group_b, callback) {
+	this._work.push({
+		type: "multi_collide",
+		a: group_a,
+		b: group_b,
+		callback: callback
+	});
+}
+
 ShapeOverlapSystem.prototype.add_tilemap_vs_group = function(tilemap, group, flag) {
 	this._work.push({
 		type: "tilemap_group",
@@ -671,6 +706,13 @@ ShapeOverlapSystem.prototype.update = function() {
 			overlap_group_callback_together(w.group, w.callback);
 		if(w.type == "multi_together")
 			overlap_groups_callback_together(w.a, w.b, w.callback);
+
+		if(w.type == "pair_collide")
+			collide_shapes_callback_together(w.a, w.b, w.callback);
+		if(w.type == "single_collide")
+			collide_group_callback_together(w.group, w.callback);
+		if(w.type == "multi_collide")
+			collide_groups_callback_together(w.a, w.b, w.callback);
 
 		if(w.type == "tilemap_group")
 			collide_group_against_tilemap(w.g, w.t, w.flag);
