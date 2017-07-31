@@ -10,24 +10,48 @@
 
 function Shape() {
 	this.type = "";
-	this.last_collision = {
-		time: -1,
-		sys: ""
-	};
+	this.collisions = {};
 	return this;
 }
 
-Shape.prototype.collided_within = function(time) {
-	return (this.last_collision.time - tick_time) <= time;
+Shape.prototype.record_collision = function(name) {
+	this.collisions[name] = tick_time;
 }
 
-Shape.prototype.just_collided = function() {
-	return this.collided_within(1);
+Shape.prototype.collision_time = function(name) {
+	var ret = this.collisions[name];
+	if(ret === undefined) {
+		ret = -1;
+	}
+	return ret;
 }
 
-Shape.prototype.collided_system = function() {
-	return this.last_collision.sys;
+Shape.prototype.collided_within = function(name, time) {
+	return (tick_time - this.collision_time(name)) <= time;
 }
+
+Shape.prototype.just_collided = function(name) {
+	return this.collided_within(name, 1);
+}
+
+//bounds - generally used for broadphase stuff; should contain the entire object
+//	(override per-shape)
+Shape.prototype.bounds_tl = function(into) {
+	into.vset(this.transform.pos);
+	return into;
+}
+
+Shape.prototype.bounds_br = function(into) {
+	into.vset(this.transform.pos);
+	return into;
+}
+
+Shape.prototype.get_bounds = function(tl, br) {
+	this.bounds_tl(tl);
+	this.bounds_br(br);
+}
+
+//circle
 
 function Circle(transform, radius) {
 	this.transform = transform;
@@ -37,6 +61,22 @@ function Circle(transform, radius) {
 }
 Circle.prototype = Object.create(Shape.prototype);
 
+Circle.prototype.bounds_tl = function(into) {
+	into.vset(this.transform.pos);
+	into.x -= this.radius;
+	into.y -= this.radius;
+	return into;
+}
+
+Circle.prototype.bounds_br = function(into) {
+	into.vset(this.transform.pos);
+	into.x += this.radius;
+	into.y += this.radius;
+	return into;
+}
+
+//aabb
+
 function AABB(transform, size) {
 	this.transform = transform;
 	this.halfsize = size.smul(0.5);
@@ -44,6 +84,15 @@ function AABB(transform, size) {
 	return this;
 }
 AABB.prototype = Object.create(Shape.prototype);
+AABB.prototype.bounds_tl = function(into) {
+	into.vset(this.transform.pos).subi(this.halfsize);
+	return into;
+}
+
+AABB.prototype.bounds_br = function(into) {
+	into.vset(this.transform.pos).addi(this.halfsize);
+	return into;
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 //physics implementation globals
@@ -52,7 +101,11 @@ var _phys_temps = {
 	//shared vector pool
 	//	todo: consider breaking these out into their own variables
 	//	 so there's not even push/pop
-	vpool: new ObjectPool(vec2, true)
+	vpool: new ObjectPool(vec2, true),
+	shapes: {
+		aabb: new AABB(new Transform(), new vec2(0,0)),
+		circle: new Circle(new Transform(), 0)
+	}
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -65,22 +118,23 @@ function _msv_aabb_aabb(a, b, into) {
 	var t = _phys_temps.vpool.pop(); //total
 
 	//load
-	a.transform.pos.subi(b.transform.pos, d).absi();
+	a.transform.pos.subi(b.transform.pos, d);
 	a.halfsize.addi(b.halfsize, t);
 
 	//compare
-	if (d.x > t.x || d.y > t.y) {
+	if (Math.abs(d.x) > t.x || Math.abs(d.y) > t.y) {
 		//no penetration on one axis
 		into.set(0,0);
 	} else {
 		var p = _phys_temps.vpool.pop(); //penetration
-		d.absi(p).subi(t);
+		p.vset(d).absi();
+		t.subi(p, p);
 
 		//decide min-sep
 		if(p.x <= p.y) {
-			into.set((d.x < 0) ? -p.x : p.x, 0);
+			into.sset((d.x < 0) ? -p.x : p.x, 0);
 		} else {
-			into.set(0, (d.y < 0) ? -p.y : p.y, 0);
+			into.sset(0, (d.y < 0) ? -p.y : p.y);
 		}
 
 		_phys_temps.vpool.push(p);
@@ -121,6 +175,36 @@ function _msv_circle_circle(a, b, into) {
 	return into;
 }
 
+function _msv_circle_aabb(a, b, into) {
+	var d = a.transform.pos.sub(b.transform.pos);
+	var ad = d.abs();
+	if(ad.x < b.halfsize.x || ad.y < b.halfsize.y) {
+		//inside edge region - aabb
+		var _temp = _phys_temps.shapes.aabb;
+		_temp.transform.pos.vset(a.transform.pos);
+		_temp.halfsize.sset(a.radius, a.radius);
+		_msv_aabb_aabb(_temp, b, into);
+	} else {
+		//collide corner point
+		var _temp = _phys_temps.shapes.circle;
+		_temp.transform.pos.vset(b.transform.pos);
+		_temp.radius = 0;
+		//save
+		var offset_x = ((d.x < 0) ? -1 : 1) * b.halfsize.x;
+		var offset_y = ((d.y < 0) ? -1 : 1) * b.halfsize.y;
+
+		_temp.transform.pos.x += offset_x;
+		_temp.transform.pos.y += offset_y;
+
+		_msv_circle_circle(a, _temp, into);
+	}
+	return into;
+}
+
+function _msv_aabb_circle(a, b, into) {
+	return _msv_circle_aabb(b, a, into).smuli(-1);
+}
+
 function _get_msv_for(a, b) {
 	//same type? easier tests
 	if(a.type == b.type) {
@@ -128,6 +212,13 @@ function _get_msv_for(a, b) {
 			return _msv_aabb_aabb;
 		} else if(a.type == "circle") {
 			return _msv_circle_circle;
+		}
+	} else {
+		//circle vs aabb
+		if(a.type == "aabb" && b.type == "circle") {
+			return _msv_aabb_circle;
+		} else if(a.type == "circle" && b.type == "aabb") {
+			return _msv_circle_aabb;
 		}
 	}
 	//otherwise, we dont have a suitable comparison
@@ -373,44 +464,26 @@ function overlap_groups_callback_together(a, b, callback) {
 
 ///////////////////////////////////////////////////////////////////////////////
 //collision builtins
-//	useful collision behaviours
+//	useful collision behaviours to be passed as a callback into the usual
+//	collision functions
 
-//"resolve" behaviour - simply move the shapes apart, completely or partially
+//"resolve" behaviour - simply move the shapes equally apart, completely or partially
 var _resolve_scale = 1.0;
-function _callback_resolve(a, b, msv) {
+function callback_resolve(a, b, msv) {
 	msv.smuli(0.5 * _resolve_scale);
 	a.transform.pos.addi(msv);
 	b.transform.pos.subi(msv);
 }
-
-function collide_shapes_resolve_completely(a, b) {
-	_resolve_scale = 1.0;
-	return collide_shapes_callback_together(a, b, _callback_resolve)
+//customising the resolve behaviour
+function set_resolve_scale(scale) {
+	_resolve_scale = scale;
 }
 
-function collide_group_resolve_completely(group) {
-	_resolve_scale = 1.0;
-	return collide_group_callback_together(group, _callback_resolve)
-}
-
-function collide_groups_resolve_completely(a, b) {
-	_resolve_scale = 1.0;
-	return collide_groups_callback_together(a, b, _callback_resolve)
-}
-
-function collide_shapes_resolve_partial(a, b, amount) {
-	_resolve_scale = amount;
-	return collide_shapes_callback_together(a, b, _callback_resolve)
-}
-
-function collide_group_resolve_partial(group, amount) {
-	_resolve_scale = amount;
-	return collide_group_callback_together(group, _callback_resolve)
-}
-
-function collide_groups_resolve_partial(a, b, amount) {
-	_resolve_scale = amount;
-	return collide_groups_callback_together(a, b, _callback_resolve)
+//resolve in only one direction; the first shape or group is moved
+//completely out of the second, which isn't touched
+function callback_resolve_only_a(a, b, msv) {
+	msv.smuli(_resolve_scale);
+	a.transform.pos.addi(msv);
 }
 
 //todo: adapt old bounce behaviour
@@ -440,6 +513,69 @@ function _do_bounce(body, ox, oy, bounce, friction) {
 	body.vy = ny * bounce + ty * friction;
 }
 
+//tilemap collisions helpers
+//interim solution before we have tilemap collision "shapes" working
+
+function sort_tile_indices_distance(tilemap, tiles, x, y) {
+	tiles.sort(function(a, b) {
+		var ax = tilemap.index_to_tile_x(a);
+		var ay = tilemap.index_to_tile_y(a);
+		var bx = tilemap.index_to_tile_x(b);
+		var by = tilemap.index_to_tile_y(b);
+		var dx = ax - bx;
+		var dy = ay - by;
+		var adist_sq = (dx*dx + dy*dy);
+		var bdist_sq = (dx*dx + dy*dy);
+		return (adist_sq < bdist_sq ? -1 : (adist_sq == bdist_sq ? 0 : 1));
+	})
+	return tiles;
+}
+
+function collide_shape_against_tile_indices(shape, tilemap, indices, callback) {
+	//collect pos in tilespace
+	var sp = new vec2();
+	sp.vset(shape.transform.pos);
+	tilemap.world_to_tile(sp, sp);
+	//sort closest to shape
+	sort_tile_indices_distance(tilemap, indices, sp.x, sp.y);
+	//create dummy shape for the tilemap
+	var _tempshape = new AABB(new Transform(), tilemap.framesize);
+	var result = false;
+	for(var i = 0; i < indices.length; i++) {
+		var index = indices[i];
+		_tempshape.transform.pos.x = tilemap.tile_to_world_x(tilemap.index_to_tile_x(index));
+		_tempshape.transform.pos.y = tilemap.tile_to_world_y(tilemap.index_to_tile_y(index));
+		if(collide_shapes_callback_separate(shape, _tempshape, callback)) {
+			result = true;
+		}
+	}
+	return result;
+}
+
+function collide_shape_against_tilemap(shape, tilemap, solid_flag) {
+	//todo: pool these
+	var tl = new vec2();
+	var br = new vec2();
+	//collect bounds in tilespace
+	shape.get_bounds(tl, br);
+	tilemap.world_to_tile(tl, tl);
+	tilemap.world_to_tile(br, br);
+	//collect tiles as needed
+	var solid = tilemap.get_tiles_matching_flag_in(solid_flag, tl.x, tl.y, br.x, br.y);
+	//resolve in order
+	return collide_shape_against_tile_indices(shape, tilemap, solid, callback_resolve_only_a);
+}
+
+function collide_group_against_tilemap(group, tilemap, solid_flag) {
+	var result = false;
+	for(var i = 0; i < group.length; i++) {
+		if(collide_shape_against_tilemap(group[i], tilemap, solid_flag)) {
+			result = true;
+		}
+	}
+	return result;
+}
+
 // systems
 
 function ShapeOverlapSystem() {
@@ -447,20 +583,64 @@ function ShapeOverlapSystem() {
 	this._shapes = 0;
 }
 
-ShapeOverlapSystem.prototype.add_group = function(group, callback) {
+ShapeOverlapSystem.prototype.add_pair_callback_separate = function(a, b, callback) {
 	this._work.push({
-		type: "single",
+		type: "pair_separate",
+		a: a,
+		b: b,
+		callback: callback
+	});
+}
+
+ShapeOverlapSystem.prototype.add_group_callback_separate = function(group, callback) {
+	this._work.push({
+		type: "single_separate",
 		group: group,
 		callback: callback
 	});
 }
 
-ShapeOverlapSystem.prototype.add_groups = function(group_a, group_b, callback) {
+ShapeOverlapSystem.prototype.add_groups_callback_separate = function(group_a, group_b, callback) {
 	this._work.push({
-		type: "multi",
+		type: "multi_separate",
 		a: group_a,
 		b: group_b,
 		callback: callback
+	});
+}
+
+ShapeOverlapSystem.prototype.add_pair_callback_together = function(a, b, callback) {
+	this._work.push({
+		type: "pair_together",
+		a: a,
+		b: b,
+		callback: callback
+	});
+}
+
+ShapeOverlapSystem.prototype.add_group_callback_together = function(group, callback) {
+	this._work.push({
+		type: "single_together",
+		group: group,
+		callback: callback
+	});
+}
+
+ShapeOverlapSystem.prototype.add_groups_callback_together = function(group_a, group_b, callback) {
+	this._work.push({
+		type: "multi_together",
+		a: group_a,
+		b: group_b,
+		callback: callback
+	});
+}
+
+ShapeOverlapSystem.prototype.add_tilemap_vs_group = function(tilemap, group, flag) {
+	this._work.push({
+		type: "tilemap_group",
+		t: tilemap,
+		g: group,
+		flag: flag
 	});
 }
 
@@ -478,10 +658,21 @@ ShapeOverlapSystem.prototype.update = function() {
 	for(var i = 0; i < this._work.length; i++)
 	{
 		var w = this._work[i];
-		if(w.type == "single")
+		if(w.type == "pair_separate")
+			overlap_shapes_callback_separate(w.a, w.b, w.callback);
+		if(w.type == "single_separate")
 			overlap_group_callback_separate(w.group, w.callback);
-		if(w.type == "multi")
+		if(w.type == "multi_separate")
 			overlap_groups_callback_separate(w.a, w.b, w.callback);
 
+		if(w.type == "pair_together")
+			overlap_shapes_callback_together(w.a, w.b, w.callback);
+		if(w.type == "single_together")
+			overlap_group_callback_together(w.group, w.callback);
+		if(w.type == "multi_together")
+			overlap_groups_callback_together(w.a, w.b, w.callback);
+
+		if(w.type == "tilemap_group")
+			collide_group_against_tilemap(w.g, w.t, w.flag);
 	}
 }

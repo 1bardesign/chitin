@@ -57,6 +57,18 @@ Tilemap.prototype.world_to_tile_y = function(y) {
 	return Math.floor((y - this.transform.pos.y)/this.framesize.y);
 }
 
+Tilemap.prototype.world_to_tile = function(v, into) {
+	if(into === undefined) {
+		into = new vec2();
+	}
+	into.sset(
+		this.world_to_tile_x(v.x),
+		this.world_to_tile_y(v.y)
+	);
+
+	return into;
+}
+
 Tilemap.prototype.tile_to_world_x = function(x) {
 	return (x + 0.5) * this.framesize.x + this.transform.pos.x;
 }
@@ -65,8 +77,16 @@ Tilemap.prototype.tile_to_world_y = function(y) {
 	return (y + 0.5) * this.framesize.y + this.transform.pos.y;
 }
 
-Tilemap.prototype.tile_to_index = function(x, y) {
-	return Math.floor(x) + Math.floor(y) * this.size.x;
+Tilemap.prototype.tile_to_world = function(v, into) {
+	if(into === undefined) {
+		into = new vec2();
+	}
+	into.sset(
+		this.tile_to_world_x(v.x),
+		this.tile_to_world_y(v.y)
+	);
+
+	return into;
 }
 
 Tilemap.prototype.index_to_tile_x = function(index) {
@@ -77,9 +97,29 @@ Tilemap.prototype.index_to_tile_y = function(index) {
 	return Math.floor(index / this.size.x);
 }
 
+Tilemap.prototype.index_to_tile = function(i, into) {
+	if(into === undefined) {
+		into = new vec2();
+	}
+	into.sset(
+		this.index_to_tile_x(i),
+		this.index_to_tile_y(i)
+	);
+
+	return into;
+}
+
+Tilemap.prototype.tile_to_index_xy = function(x, y) {
+	return Math.floor(x) + Math.floor(y) * this.size.x;
+}
+
+Tilemap.prototype.tile_to_index = function(v) {
+	return Math.floor(v.x) + Math.floor(v.y) * this.size.x;
+}
+
 //get tiles (in tile space)
 Tilemap.prototype.get = function(x, y) {
-	return this.tiles[this.tile_to_index(x, y)];
+	return this.tiles[this.tile_to_index_xy(x, y)];
 }
 
 Tilemap.prototype.get_wrapped = function(x, y) {
@@ -106,7 +146,7 @@ Tilemap.prototype.get_clamped_worldspace = function(x, y) {
 //setting tiles
 
 Tilemap.prototype.set = function(x, y, t) {
-	return this.tiles[this.tile_to_index(x, y)] = t;
+	return this.tiles[this.tile_to_index_xy(x, y)] = t;
 }
 
 Tilemap.prototype.set_wrapped = function(x, y, t) {
@@ -159,7 +199,7 @@ Tilemap.prototype.unset_flag = function(tile, flag) {
 	this.flags[tile] &= ~(1 << flag);
 }
 
-//getting tiles matching
+//getting tiles matching (tile space)
 //returns list of matching indices
 
 Tilemap.prototype.get_tiles_matching_in = function(match, x1, y1, x2, y2) {
@@ -174,7 +214,7 @@ Tilemap.prototype.get_tiles_matching_in = function(match, x1, y1, x2, y2) {
 	for(var y = y1; y <= y2; y++) {
 		for(var x = x1; x <= x2; x++) {
 			if(match(this.get(x, y))) {
-				ret.push(this.tile_to_index(x, y));
+				ret.push(this.tile_to_index_xy(x, y));
 			}
 		}
 	}
@@ -187,9 +227,10 @@ Tilemap.prototype.get_tiles_matching = function(match) {
 
 Tilemap.prototype.get_tiles_matching_flag_in = function(flag, x1, y1, x2, y2) {
 	//TODO: optimise to avoid fn creation
+	var tiles = this;
 	return this.get_tiles_matching_in(
 		function(t) {
-			return tilemap_get_flag(t, flag);
+			return tiles.get_flag(t, flag);
 		},
 		x1, y1,
 		x2, y2
@@ -215,24 +256,10 @@ Tilemap.prototype.get_tiles_matching_type = function(t) {
 	return this.get_tiles_matching_type_in(t, 0, 0, this.size.x-1, this.size.y -1);
 }
 
-function sort_tile_indices_distance(tiles, x, y) {
-	tiles.sort(function(a, b) {
-		var ax = index_to_tile_x(a);
-		var ay = index_to_tile_y(a);
-		var bx = index_to_tile_x(b);
-		var by = index_to_tile_y(b);
-		var dx = ax - bx;
-		var dy = ay - by;
-		var adist_sq = (dx*dx + dy*dy);
-		var bdist_sq = (dx*dx + dy*dy);
-		return (adist_sq < bdist_sq ? -1 : (adist_sq == bdist_sq ? 0 : 1));
-	})
-	return tiles;
-}
-
 //render tiles on screen
 
 Tilemap.prototype._render_tilemap = function(x1, y1, x2, y2, ox, oy) {
+	if(this.tiles.length == 0) return;
 	//ensure in correct space
 	x1 = Math.floor((x1 - ox) / this.framesize.x);
 	x2 = Math.ceil((x2 - ox) / this.framesize.x);
@@ -298,18 +325,17 @@ Tilemap.prototype.resize = function(w, h) {
 Tilemap.prototype.load_csv = function(str) {
 	this.tiles = [];
 	str = str.trim();
-	var lines = str.split("\n");
-	this.size.y = lines.length;
-	for(var i = 0; i < lines.length; i++) {
-		var line = lines[i].trim();
-		var chunks = line.split(",");
-		this.size.x = chunks.length;
-		for(var j = 0; j < chunks.length; j++) {
-			var chunk = parseInt(chunks[j]);
-			if(isNaN(chunk)) {
-				chunk = 0;
+	var csv = csv_to_2d_array(str, {parse_ints: true});
+	this.size.y = csv.length;
+	for(var i = 0; i < csv.length; i++) {
+		var row = csv[i];
+		this.size.x = row.length;
+		for(var j = 0; j < row.length; j++) {
+			var t = row[j];
+			if(isNaN(t)) {
+				t = 0;
 			}
-			this.tiles.push(chunk);
+			this.tiles.push(t);
 		}
 	}
 }
