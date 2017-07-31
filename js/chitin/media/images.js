@@ -68,24 +68,20 @@ function flipped_image(image, flipx, flipy) {
 	var yoffset = 0;
 	if(flipx) {
 		xscale = -1;
-		xoffset = -image.framex;
+		xoffset = -image.width;
 	}
 	if(flipy) {
 		yscale = -1;
-		yoffset = -image.framey;
+		yoffset = -image.height;
 	}
 	flip_context.scale(xscale, yscale);
 
-	//blit frames
-	for(var y = 0; y < image.height; y += image.framey) {
-		for(var x = 0; x < image.width; x += image.framex) {
-			flip_context.drawImage(image.element,
-				x, y, image.framex, image.framey,
-				x * xscale + xoffset, y * yscale + yoffset,
-				image.framex, image.framey
-			);
-		}
-	}
+	flip_context.drawImage(image.element,
+		0, 0, image.width, image.height,
+		xoffset, yoffset,
+		image.width, image.height
+	);
+
 	//write out to the cache
 	image.flipcache[id] = flip_surface;
 	//return it
@@ -93,7 +89,7 @@ function flipped_image(image, flipx, flipy) {
 }
 
 //add an external image from a dom element (img, canvas, whatever)
-function add_external_image(name, element, spritesheet, framex, framey, generate_flipped) {
+function add_external_image(name, element, generate_flipped) {
 	var image = {};
 	image.loaded = true;
 	image.name = name;
@@ -102,19 +98,6 @@ function add_external_image(name, element, spritesheet, framex, framey, generate
 	image.element = element;
 	image.width = element.width;
 	image.height = element.height;
-
-	if(spritesheet)
-	{
-		image.spritesheet = true;
-		image.framex = framex;
-		image.framey = framey;
-	}
-	else
-	{
-		image.spritesheet = false;
-		image.framex = element.width;
-		image.framey = element.height;
-	}
 
 	//generate flipped versions ahead of time
 	//(otherwise they will be lazy-loaded)
@@ -129,7 +112,7 @@ function add_external_image(name, element, spritesheet, framex, framey, generate
 }
 
 //load an image from the assets folder
-function load_image(name, spritesheet, framex, framey, generate_flipped) {
+function load_image(name, generate_flipped) {
 	//possible early-out if we've already loaded it
 	var fetched = fetch_image(name);
 	if(fetched !== null) {
@@ -147,16 +130,6 @@ function load_image(name, spritesheet, framex, framey, generate_flipped) {
 	image.element = document.createElement("img");
 	image.element.src = get_image_path(name);
 
-	if(spritesheet) {
-		image.spritesheet = true;
-		image.framex = framex;
-		image.framey = framey;
-	} else {
-		image.spritesheet = false;
-		image.framex = -1;
-		image.framey = -1;
-	}
-
 	image.width = -1;
 	image.height = -1;
 
@@ -165,10 +138,6 @@ function load_image(name, spritesheet, framex, framey, generate_flipped) {
 		//read the true size
 		image.width = image.element.width;
 		image.height = image.element.height;
-		if(!image.spritesheet) {
-			image.framex = image.width;
-			image.framey = image.height;
-		}
 		//generate flipped versions ahead of time
 		//(otherwise they will be lazy-loaded)
 		if(generate_flipped) {
@@ -200,7 +169,6 @@ function draw_image_simple(img, x, y) {
 }
 
 //draw the whole image (optionally flipped)
-//(flips are per-frame for spritesheets)
 function draw_image_simple_flipped(img, x, y, flipx, flipy)
 {
 	if(!img.loaded) {
@@ -216,7 +184,6 @@ function draw_image_simple_flipped(img, x, y, flipx, flipy)
 }
 
 //draw a subsection of the image (optionally flipped)
-//(flips are per-frame for spritesheets)
 function draw_image_ex(img, sx, sy, sw, sh, dx, dy, dw, dh, flipx, flipy)
 {
 	if(!img.loaded) {
@@ -234,12 +201,17 @@ function draw_image_ex(img, sx, sy, sw, sh, dx, dy, dw, dh, flipx, flipy)
 		dh = Math.round(dh);
 	}
 
+	if(flipx) {
+		sx = img.width - sx - sw;
+	}
+	if(flipy) {
+		sy = img.height - sy - sh;
+	}
+
 	get_context().drawImage(flipped_image(img, flipx, flipy), sx, sy, sw, sh, dx, dy, dw, dh);
 }
 
 //draw a scaled subsection of the image defined by a 1d frame (optionally flipped)
-//(flips are per-frame for spritesheets; you probably want fw and fh equal
-//	to the spritesheet framex and framey defined on load)
 function draw_image_frame_ex(img, x, y, frame, fw, fh, scalex, scaley, flipx, flipy)
 {
 	if(!img.loaded) {
@@ -254,14 +226,12 @@ function draw_image_frame_ex(img, x, y, frame, fw, fh, scalex, scaley, flipx, fl
 }
 
 //draw a subsection of the image defined by a 1d frame (optionally flipped)
-//(same flipping and framesize rules apply)
 function draw_image_frame(img, x, y, frame, fw, fh, flipx, flipy)
 {
 	draw_image_frame_ex(img, x, y, frame, fw, fh, 1, 1, flipx, flipy);
 }
 
 //draw a scaled, centred subsection of the image defined by a 1d frame;
-//(same flipping and framesize rules apply)
 function draw_image_frame_centered_ex(img, x, y, frame, fw, fh, scalex, scaley, flipx, flipy)
 {
 	if(!img.loaded) {
@@ -278,7 +248,6 @@ function draw_image_frame_centered_ex(img, x, y, frame, fw, fh, scalex, scaley, 
 }
 
 //draw a centred subsection of the image defined by a 1d frame;
-//(same flipping and framesize rules apply)
 function draw_image_frame_centered(img, x, y, frame, fw, fh, flipx, flipy)
 {
 	draw_image_frame_centered_ex(img, x, y, frame, fw, fh, 1, 1, flipx, flipy);
