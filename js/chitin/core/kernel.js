@@ -10,7 +10,7 @@
 "use strict"
 
 //config
-var target_fps = 30;
+var target_fps = 60;
 var timescale = 1;
 
 //time management

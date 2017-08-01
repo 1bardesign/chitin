@@ -22,14 +22,15 @@ TilemapCollisionState.prototype.start = function() {
 	add_system("tmc::state_machine", new StateMachineSystem());
 	add_system("tmc::behaviour", new BehaviourSystem());
 	//(physics)
-	add_system("tmc::collide", new ShapeOverlapSystem());
+	add_system("tmc::overlap", new ShapeOverlapSystem());
+	add_system("tmc::collide", new ShapeCollideSystem());
 	//tilemap behind
-	var tiles = new Tilemap({
+	add_system("tmc::tilemap", new SharedTilemapSystem({
 		asset: "sprites",
 		transform: new Transform(),
 		framesize: new vec2(8,8)
-	});
-	add_system("tmc::tilemap", new SharedTilemapSystem(tiles));
+	}));
+	var tiles = system("tmc::tilemap").tilemap;
 	//sprites in the foreground
 	add_system("tmc::sprite", new SpriteSystem("tmc::transform", false));
 
@@ -62,9 +63,8 @@ TilemapCollisionState.prototype.start = function() {
 	var transforms = new Group();
 	var shapes = new Group();
 
-	set_resolve_scale(0.5);
-	system("tmc::collide").add_group_collide(shapes, callback_resolve);
-	system("tmc::collide").add_tilemap_vs_group(tiles, shapes, 1);
+	system("tmc::collide").add_group_collide(shapes, callback_resolve, 0.50);
+	system("tmc::collide").add_tilemap_vs_group(tiles, shapes, 1, 0.95);
 
 	function walk_transform(transform) {
 		this.transform = transform;
@@ -92,7 +92,7 @@ TilemapCollisionState.prototype.start = function() {
 		this.transform.vel.vset(_walk);
 	}
 
-	for(var i = 0; i < 50; i++)
+	for(var i = 0; i < 20; i++)
 	{
 		var e = new Entity("tmc");
 

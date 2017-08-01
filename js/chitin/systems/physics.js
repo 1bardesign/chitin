@@ -111,6 +111,7 @@ var _phys_temps = {
 ///////////////////////////////////////////////////////////////////////////////
 //minimum separating vector tests
 //take 2 shapes and a vector to write into
+//impl note: for asymmetrical versions of these we need both versions
 
 function _msv_aabb_aabb(a, b, into) {
 	//alloc
@@ -124,7 +125,7 @@ function _msv_aabb_aabb(a, b, into) {
 	//compare
 	if (Math.abs(d.x) > t.x || Math.abs(d.y) > t.y) {
 		//no penetration on one axis
-		into.set(0,0);
+		into.sset(0,0);
 	} else {
 		var p = _phys_temps.vpool.pop(); //penetration
 		p.vset(d).absi();
@@ -183,13 +184,14 @@ function _msv_circle_aabb(a, b, into) {
 	d.vset(a.transform.pos).subi(b.transform.pos);
 	d.absi(ad);
 	//compare
-	if(ad.x < b.halfsize.x || ad.y < b.halfsize.y) {
+	if(ad.x <= b.halfsize.x || ad.y <= b.halfsize.y) {
 		//inside edge region - aabb
 		var _temp = _phys_temps.shapes.aabb;
 		_temp.transform.pos.vset(a.transform.pos);
 		_temp.halfsize.sset(a.radius, a.radius);
 		_msv_aabb_aabb(_temp, b, into);
 	} else {
+		//inside corner region
 		//collide corner point
 		var _temp = _phys_temps.shapes.circle;
 		_temp.transform.pos.vset(b.transform.pos);
@@ -231,6 +233,7 @@ function _get_msv_for(a, b) {
 		}
 	}
 	//otherwise, we dont have a suitable comparison
+	alert("missing msv function for "+a.type+" vs "+b.type);
 	return null;
 }
 
@@ -247,7 +250,7 @@ function _collide_shapes_generic(a, b, callback, callback_separate) {
 
 	var result = collide_shapes(a, b, into).length_squared() > 0;
 	if(result) {
-		//a,b is always required
+		//a, b is always required
 		callback(a, b, into);
 		if(callback_separate) {
 			//b,a only for callback_separate mode
@@ -335,15 +338,17 @@ function collide_groups_callback_together(a, b, callback) {
 
 ///////////////////////////////////////////////////////////////////////////////
 //overlap tests
-//	these use the msv tests for now to cut down on code size
-//	special-cases of them should be written as an optimisation
 
-function _overlap_aabb_aabb(a,b) {
+//(function to convert msv to overlap boolean
+// this is always slower than a tailor-made test
+// but means we don't have to repeat ourselves to
+// get off the ground)
+function _msv_to_overlap(a, b, f) {
 	//alloc
 	var into = _phys_temps.vpool.pop();
 
 	//check
-	var result = _msv_aabb_aabb(a, b, into).length() > 0;
+	var result = f(a, b, into).length_squared() > 0;
 
 	//free
 	_phys_temps.vpool.push(into);
@@ -351,17 +356,20 @@ function _overlap_aabb_aabb(a,b) {
 	return result;
 }
 
-function _overlap_circle_circle(a,b) {
-	//alloc
-	var into = _phys_temps.vpool.pop();
+function _overlap_aabb_aabb(a, b) {
+	return _msv_to_overlap(a, b, _msv_aabb_aabb);
+}
 
-	//check
-	var result = _msv_circle_circle(a, b, into).length() > 0;
+function _overlap_circle_circle(a, b) {
+	return _msv_to_overlap(a, b, _msv_circle_circle);
+}
 
-	//free
-	_phys_temps.vpool.push(into);
+function _overlap_aabb_circle(a, b) {
+	return _msv_to_overlap(a, b, _msv_aabb_circle);
+}
 
-	return result;
+function _overlap_circle_aabb(a, b) {
+	return _msv_to_overlap(a, b, _msv_circle_aabb);
 }
 
 function _get_overlap_for(a, b) {
@@ -372,8 +380,15 @@ function _get_overlap_for(a, b) {
 		} else if(a.type == "circle") {
 			return _overlap_circle_circle;
 		}
+	} else {
+		if(a.type == "aabb" && b.type == "circle") {
+			return _overlap_aabb_circle;
+		} else if(a.type == "circle" && b.type == "aabb") {
+			return _overlap_circle_aabb;
+		}
 	}
 	//otherwise, we dont have a suitable comparison
+	alert("missing overlap function for "+a.type+" vs "+b.type);
 	return null;
 }
 
@@ -387,7 +402,7 @@ function overlapped_shapes(a, b) {
 function _overlap_shapes_generic(a, b, callback, callback_separate) {
 	var result = overlapped_shapes(a, b);
 	if(result) {
-		//a,b is always required
+		//a, b is always required
 		callback(a, b);
 		if(callback_separate) {
 			//b,a only for callback_separate mode
@@ -485,6 +500,9 @@ function callback_resolve(a, b, msv) {
 }
 //customising the resolve behaviour
 function set_resolve_scale(scale) {
+	if(scale === undefined) {
+		scale = 1;
+	}
 	_resolve_scale = scale;
 }
 
@@ -554,7 +572,7 @@ function collide_shape_against_tile_indices(shape, tilemap, indices, callback) {
 		var index = indices[i];
 		_tempshape.transform.pos.x = tilemap.tile_to_world_x(tilemap.index_to_tile_x(index));
 		_tempshape.transform.pos.y = tilemap.tile_to_world_y(tilemap.index_to_tile_y(index));
-		if(collide_shapes_callback_separate(shape, _tempshape, callback)) {
+		if(collide_shapes_callback_together(shape, _tempshape, callback)) {
 			result = true;
 		}
 	}
@@ -644,7 +662,51 @@ ShapeOverlapSystem.prototype.add_groups_callback_together = function(group_a, gr
 	});
 }
 
-ShapeOverlapSystem.prototype.add_pair_collide = function(a, b, callback) {
+ShapeOverlapSystem.prototype.create_component = function(args) {
+	this._shapes++;
+	return args;
+}
+
+ShapeOverlapSystem.prototype.destroy_component = function(comp) {
+	this._shapes--;
+	if(this._shapes < 0) console.error("Too many shapes were destroyed in overlap system: "+this.name);
+}
+
+ShapeOverlapSystem.prototype.update = function() {
+	for(var i = 0; i < this._work.length; i++)
+	{
+		var w = this._work[i];
+		//callbacks separate
+		if(w.type == "pair_separate") {
+			overlap_shapes_callback_separate(w.a, w.b, w.callback);
+		}
+		if(w.type == "single_separate") {
+			overlap_group_callback_separate(w.group, w.callback);
+		}
+		if(w.type == "multi_separate") {
+			overlap_groups_callback_separate(w.a, w.b, w.callback);
+		}
+		//callbacks together
+		if(w.type == "pair_together") {
+			overlap_shapes_callback_together(w.a, w.b, w.callback);
+		}
+		if(w.type == "single_together") {
+			overlap_group_callback_together(w.group, w.callback);
+		}
+		if(w.type == "multi_together") {
+			overlap_groups_callback_together(w.a, w.b, w.callback);
+		}
+	}
+}
+
+function ShapeCollideSystem() {
+	this._work = [];
+	this._shapes = 0;
+}
+
+//collisions
+
+ShapeCollideSystem.prototype.add_pair_collide = function(a, b, callback) {
 	this._work.push({
 		type: "pair_collide",
 		a: a,
@@ -653,7 +715,7 @@ ShapeOverlapSystem.prototype.add_pair_collide = function(a, b, callback) {
 	});
 }
 
-ShapeOverlapSystem.prototype.add_group_collide = function(group, callback) {
+ShapeCollideSystem.prototype.add_group_collide = function(group, callback) {
 	this._work.push({
 		type: "single_collide",
 		group: group,
@@ -661,7 +723,7 @@ ShapeOverlapSystem.prototype.add_group_collide = function(group, callback) {
 	});
 }
 
-ShapeOverlapSystem.prototype.add_groups_collide = function(group_a, group_b, callback) {
+ShapeCollideSystem.prototype.add_groups_collide = function(group_a, group_b, callback) {
 	this._work.push({
 		type: "multi_collide",
 		a: group_a,
@@ -670,51 +732,85 @@ ShapeOverlapSystem.prototype.add_groups_collide = function(group_a, group_b, cal
 	});
 }
 
-ShapeOverlapSystem.prototype.add_tilemap_vs_group = function(tilemap, group, flag) {
+//builtin - resolve overlaps
+// (scaled by some amount)
+
+ShapeCollideSystem.prototype.add_pair_resolve = function(a, b, amount) {
+	this._work.push({
+		type: "pair_resolve",
+		a: a,
+		b: b,
+		amount: amount
+	});
+}
+
+ShapeCollideSystem.prototype.add_group_resolve = function(group, amount) {
+	this._work.push({
+		type: "single_resolve",
+		group: group,
+		amount: amount
+	});
+}
+
+ShapeCollideSystem.prototype.add_groups_resolve = function(group_a, group_b, amount) {
+	this._work.push({
+		type: "multi_resolve",
+		a: group_a,
+		b: group_b,
+		amount: amount
+	});
+}
+
+ShapeCollideSystem.prototype.add_tilemap_vs_group = function(tilemap, group, flag, amount) {
 	this._work.push({
 		type: "tilemap_group",
 		t: tilemap,
 		g: group,
-		flag: flag
+		flag: flag,
+		amount: amount
 	});
 }
 
-ShapeOverlapSystem.prototype.create_component = function(args) {
+ShapeCollideSystem.prototype.create_component = function(args) {
 	this._shapes++;
 	return args;
 }
 
-ShapeOverlapSystem.prototype.destroy_component = function(comp) {
+ShapeCollideSystem.prototype.destroy_component = function(comp) {
 	this._shapes--;
-	if(this._shapes < 0) console.error("Too many shapes were destroyed in collision system");
+	if(this._shapes < 0) console.error("Too many shapes were destroyed in collision system: "+this.name);
 }
 
-ShapeOverlapSystem.prototype.update = function() {
+ShapeCollideSystem.prototype.update = function() {
 	for(var i = 0; i < this._work.length; i++)
 	{
 		var w = this._work[i];
-		if(w.type == "pair_separate")
-			overlap_shapes_callback_separate(w.a, w.b, w.callback);
-		if(w.type == "single_separate")
-			overlap_group_callback_separate(w.group, w.callback);
-		if(w.type == "multi_separate")
-			overlap_groups_callback_separate(w.a, w.b, w.callback);
-
-		if(w.type == "pair_together")
-			overlap_shapes_callback_together(w.a, w.b, w.callback);
-		if(w.type == "single_together")
-			overlap_group_callback_together(w.group, w.callback);
-		if(w.type == "multi_together")
-			overlap_groups_callback_together(w.a, w.b, w.callback);
-
-		if(w.type == "pair_collide")
+		if(w.type == "pair_collide") {
 			collide_shapes_callback_together(w.a, w.b, w.callback);
-		if(w.type == "single_collide")
+		}
+		if(w.type == "single_collide") {
 			collide_group_callback_together(w.group, w.callback);
-		if(w.type == "multi_collide")
+		}
+		if(w.type == "multi_collide") {
 			collide_groups_callback_together(w.a, w.b, w.callback);
+		}
 
-		if(w.type == "tilemap_group")
+		if(w.type == "pair_resolve") {
+			set_resolve_scale(w.amount);
+			collide_shapes_callback_together(w.a, w.b, callback_resolve);
+		}
+		if(w.type == "single_resolve") {
+			set_resolve_scale(w.amount);
+			collide_group_callback_together(w.group, callback_resolve);
+		}
+		if(w.type == "multi_resolve") {
+			set_resolve_scale(w.amount);
+			collide_groups_callback_together(w.a, w.b, callback_resolve);
+		}
+
+		if(w.type == "tilemap_group") {
+			set_resolve_scale(w.amount);
 			collide_group_against_tilemap(w.g, w.t, w.flag);
+		}
 	}
 }

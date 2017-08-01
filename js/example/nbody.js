@@ -110,7 +110,7 @@ NBodySimState.prototype.start = function() {
 		}
 		//apply some drag
 		a.transform.mass = a.radius;
-		_grv_t.set(b.transform.vel).smuli(0.001);
+		_grv_t.set(b.transform.vel).smuli(0.02*dt());
 		a.transform.vel.addi(_grv_t);
 	}
 

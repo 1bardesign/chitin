@@ -394,8 +394,8 @@ TilemapSystem.prototype.render = function() {
 //
 ///////////////////////////////////////////////////////////////////////////////
 
-function SharedTilemapSystem(tilemap) {
-	this.tilemap = tilemap;
+function SharedTilemapSystem(args) {
+	this.tilemap = new Tilemap(args);
 	return this;
 }
 
