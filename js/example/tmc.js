@@ -22,33 +22,37 @@ TilemapCollisionState.prototype.start = function() {
 	add_system("tmc::state_machine", new StateMachineSystem());
 	add_system("tmc::behaviour", new BehaviourSystem());
 	//(physics)
-	add_system("tmc::overlap", new ShapeOverlapSystem());
-	add_system("tmc::collide", new ShapeCollideSystem());
-	//tilemap behind
+	add_system("tmc::physics", new PhysicsResolutionSystem());
+	//sprites
+	add_system("tmc::sprite", new SpriteSystem("tmc::transform", false));
+	//tilemap in front
 	add_system("tmc::tilemap", new SharedTilemapSystem({
 		asset: "sprites",
 		transform: new Transform(),
 		framesize: new vec2(8,8)
 	}));
 	var tiles = system("tmc::tilemap").tilemap;
-	//sprites in the foreground
-	add_system("tmc::sprite", new SpriteSystem("tmc::transform", false));
 
 	//load and build the tilemap
 	tiles.load_csv(
-		"1,1,1,1,1,1,1,1,1,1,1,1,1\n"+
-		"1,0,0,0,0,0,0,0,0,0,0,0,1\n"+
-		"1,0,0,0,0,0,0,0,0,0,0,0,1\n"+
-		"1,0,0,0,0,0,0,0,0,0,0,0,1\n"+
-		"1,0,0,0,1,1,0,0,0,0,0,0,1\n"+
-		"1,0,0,0,1,0,0,0,0,0,0,0,1\n"+
-		"1,0,0,0,0,0,0,0,0,0,0,0,1\n"+
-		"1,0,0,0,1,0,0,0,1,0,0,0,1\n"+
-		"1,0,0,0,1,1,1,1,1,0,0,0,1\n"+
-		"1,0,0,0,0,0,0,0,0,0,0,0,1\n"+
-		"1,0,0,0,0,0,0,0,0,0,0,0,1\n"+
-		"1,0,0,0,0,0,0,0,0,0,0,0,1\n"+
-		"1,1,1,1,1,1,1,1,1,1,1,1,1"
+		"1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1\n"+
+		"1,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,1\n"+
+		"1,0,0,0,0,1,1,1,0,0,0,0,0,0,1,0,0,0,0,0,1\n"+
+		"1,0,0,0,1,1,1,1,1,0,0,0,0,0,0,1,0,0,0,0,1\n"+
+		"1,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,1\n"+
+		"1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1\n"+
+		"1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1\n"+
+		"1,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,1\n"+
+		"1,0,0,0,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,1\n"+
+		"1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1\n"+
+		"1,0,0,0,0,0,0,0,0,0,0,1,1,1,1,0,0,1,0,0,1\n"+
+		"1,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,1,0,0,1\n"+
+		"1,1,1,0,0,1,0,1,1,1,1,1,0,0,0,0,0,1,0,0,1\n"+
+		"1,1,1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,1\n"+
+		"1,1,1,0,0,1,1,1,1,1,1,0,0,0,0,0,0,1,0,0,1\n"+
+		"1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1\n"+
+		"1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1\n"+
+		"1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1"
 	);
 	//centre the tilemap
 	tiles.transform.pos.sset(
@@ -63,15 +67,18 @@ TilemapCollisionState.prototype.start = function() {
 	var transforms = new Group();
 	var shapes = new Group();
 
-	system("tmc::collide").add_group_collide(shapes, callback_resolve, 0.50);
-	system("tmc::collide").add_tilemap_vs_group(tiles, shapes, 1, 0.95);
+	system("tmc::physics").add_group_collide(shapes, callback_resolve, 0.50);
+	system("tmc::physics").add_tilemap_vs_group(tiles, shapes, 1, 0.95);
+	system("tmc::physics").add_react_bounce(shapes, 0.1, 1);
 
-	function walk_transform(transform) {
+	function player_controls(transform) {
 		this.transform = transform;
 		return this;
 	}
 	var _walk = new vec2();
-	walk_transform.prototype.update = function() {
+	player_controls.prototype.update = function() {
+		var s = this.e.c("sprite");
+		var framex = 0;
 		_walk.sset(0,0);
 		if(key_pressed("left")) {
 			_walk.x -= 1;
@@ -79,28 +86,27 @@ TilemapCollisionState.prototype.start = function() {
 		if(key_pressed("right")) {
 			_walk.x += 1;
 		}
-		if(key_pressed("up")) {
-			_walk.y -= 1;
+		_walk.smuli(100);
+		_walk.smuli(dt());
+		if(key_just_pressed("up")) {
+			_walk.y -= 70;
+			framex = 1;
 		}
-		if(key_pressed("down")) {
-			_walk.y += 1;
-		}
-		if(_walk.length_squared() > 0) {
-			_walk.normalisei().smuli(key_pressed("shift") ? 100 : 20);
-		}
+		s.set_frame_xy(framex,1);
 
-		this.transform.vel.vset(_walk);
+		this.transform.vel.smuli(0.999).addi(_walk);
 	}
 
-	for(var i = 0; i < 20; i++)
+	for(var i = 0; i < 1; i++)
 	{
 		var e = new Entity("tmc");
 
 		var transform = e.add("transform");
 		transform.pos.sset(Math.random() * 40, 0).rotli(Math.random()*Math.PI*2);
+		transform.acc.sset(0,50);
 		transforms.add(transform);
 
-		e.add("behaviour", new walk_transform(transform));
+		e.add("behaviour", new player_controls(transform));
 
 		e.add("sprite", {
 			asset: "sprites",
@@ -111,7 +117,8 @@ TilemapCollisionState.prototype.start = function() {
 		});
 
 		var shape = e.add(
-			"collide",
+			"physics",
+			//new AABB(transform, new vec2(8,8))
 			new Circle(transform, 4)
 		);
 

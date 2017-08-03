@@ -513,42 +513,15 @@ function callback_resolve_only_a(a, b, msv) {
 	a.transform.pos.addi(msv);
 }
 
-//todo: adapt old bounce behaviour
-//bouncing based on a resolution
-function _do_bounce(body, ox, oy, bounce, friction) {
-	//get normalised surface normal
-	//or else bail on the bounce (no movement)
-	var nx = ox - body.x;
-	var ny = oy - body.y;
-	var len = v2_length(nx, ny);
-	if(len == 0) return;
-	nx /= len;
-	ny /= len;
-	//get tangent
-	var tx = v2_rot90_x(nx, ny);
-	var ty = v2_rot90_y(nx, ny);
-	//project in each direction
-	var perp = v2_scalar_projection(body.vx, body.vy, nx, ny);
-	var par = v2_scalar_projection(body.vx, body.vy, tx, ty);
-	//scale and actually bounce
-	bounce *= perp;
-	friction *= par;
-	if(bounce > 0)
-		bounce *= -1;
-	//finally apply it as new velocity
-	body.vx = nx * bounce + tx * friction;
-	body.vy = ny * bounce + ty * friction;
-}
-
 //tilemap collisions helpers
 //interim solution before we have tilemap collision "shapes" working
 
-function sort_tile_indices_distance(tilemap, tiles, x, y) {
+function _sort_tile_indices_distance(tilemap, tiles, x, y) {
 	tiles.sort(function(a, b) {
-		var ax = tilemap.index_to_tile_x(a);
-		var ay = tilemap.index_to_tile_y(a);
-		var bx = tilemap.index_to_tile_x(b);
-		var by = tilemap.index_to_tile_y(b);
+		var ax = tilemap.tile_to_world_x(tilemap.index_to_tile_x(a));
+		var ay = tilemap.tile_to_world_y(tilemap.index_to_tile_y(a));
+		var bx = tilemap.tile_to_world_x(tilemap.index_to_tile_x(b));
+		var by = tilemap.tile_to_world_y(tilemap.index_to_tile_y(b));
 		var dx = ax - bx;
 		var dy = ay - by;
 		var adist_sq = (dx*dx + dy*dy);
@@ -558,13 +531,13 @@ function sort_tile_indices_distance(tilemap, tiles, x, y) {
 	return tiles;
 }
 
-function collide_shape_against_tile_indices(shape, tilemap, indices, callback) {
+function _collide_shape_against_tile_indices(shape, tilemap, indices, callback) {
 	//collect pos in tilespace
 	var sp = new vec2();
 	sp.vset(shape.transform.pos);
 	tilemap.world_to_tile(sp, sp);
 	//sort closest to shape
-	sort_tile_indices_distance(tilemap, indices, sp.x, sp.y);
+	_sort_tile_indices_distance(tilemap, indices, sp.x, sp.y);
 	//create dummy shape for the tilemap
 	var _tempshape = new AABB(new Transform(), tilemap.framesize);
 	var result = false;
@@ -579,7 +552,7 @@ function collide_shape_against_tile_indices(shape, tilemap, indices, callback) {
 	return result;
 }
 
-function collide_shape_against_tilemap(shape, tilemap, solid_flag) {
+function _collide_shape_against_tilemap_generic(shape, tilemap, solid_flag, callback) {
 	//todo: pool these
 	var tl = new vec2();
 	var br = new vec2();
@@ -590,27 +563,39 @@ function collide_shape_against_tilemap(shape, tilemap, solid_flag) {
 	//collect tiles as needed
 	var solid = tilemap.get_tiles_matching_flag_in(solid_flag, tl.x, tl.y, br.x, br.y);
 	//resolve in order
-	return collide_shape_against_tile_indices(shape, tilemap, solid, callback_resolve_only_a);
+	return _collide_shape_against_tile_indices(shape, tilemap, solid, callback);
 }
 
-function collide_group_against_tilemap(group, tilemap, solid_flag) {
+function _collide_group_against_tilemap_generic(group, tilemap, solid_flag, f) {
 	var result = false;
 	for(var i = 0; i < group.length; i++) {
-		if(collide_shape_against_tilemap(group[i], tilemap, solid_flag)) {
+		if(f(group[i], tilemap, solid_flag)) {
 			result = true;
 		}
 	}
 	return result;
 }
 
+function resolve_shape_against_tilemap(shape, tilemap, solid_flag) {
+	return _collide_shape_against_tilemap_generic(shape, tilemap, solid_flag, callback_resolve_only_a);
+}
+
+function resolve_group_against_tilemap(group, tilemap, solid_flag) {
+	return _collide_group_against_tilemap_generic(group, tilemap, solid_flag, resolve_shape_against_tilemap);
+}
+
 // systems
 
-function ShapeOverlapSystem() {
+function PhysicsResolutionSystem() {
 	this._work = [];
+	this._reacts = [];
 	this._shapes = 0;
 }
 
-ShapeOverlapSystem.prototype.add_pair_callback_separate = function(a, b, callback) {
+////////////////////
+// overlaps
+
+PhysicsResolutionSystem.prototype.add_pair_callback_separate = function(a, b, callback) {
 	this._work.push({
 		type: "pair_separate",
 		a: a,
@@ -619,7 +604,7 @@ ShapeOverlapSystem.prototype.add_pair_callback_separate = function(a, b, callbac
 	});
 }
 
-ShapeOverlapSystem.prototype.add_group_callback_separate = function(group, callback) {
+PhysicsResolutionSystem.prototype.add_group_callback_separate = function(group, callback) {
 	this._work.push({
 		type: "single_separate",
 		group: group,
@@ -627,7 +612,7 @@ ShapeOverlapSystem.prototype.add_group_callback_separate = function(group, callb
 	});
 }
 
-ShapeOverlapSystem.prototype.add_groups_callback_separate = function(group_a, group_b, callback) {
+PhysicsResolutionSystem.prototype.add_groups_callback_separate = function(group_a, group_b, callback) {
 	this._work.push({
 		type: "multi_separate",
 		a: group_a,
@@ -636,7 +621,7 @@ ShapeOverlapSystem.prototype.add_groups_callback_separate = function(group_a, gr
 	});
 }
 
-ShapeOverlapSystem.prototype.add_pair_callback_together = function(a, b, callback) {
+PhysicsResolutionSystem.prototype.add_pair_callback_together = function(a, b, callback) {
 	this._work.push({
 		type: "pair_together",
 		a: a,
@@ -645,7 +630,7 @@ ShapeOverlapSystem.prototype.add_pair_callback_together = function(a, b, callbac
 	});
 }
 
-ShapeOverlapSystem.prototype.add_group_callback_together = function(group, callback) {
+PhysicsResolutionSystem.prototype.add_group_callback_together = function(group, callback) {
 	this._work.push({
 		type: "single_together",
 		group: group,
@@ -653,7 +638,7 @@ ShapeOverlapSystem.prototype.add_group_callback_together = function(group, callb
 	});
 }
 
-ShapeOverlapSystem.prototype.add_groups_callback_together = function(group_a, group_b, callback) {
+PhysicsResolutionSystem.prototype.add_groups_callback_together = function(group_a, group_b, callback) {
 	this._work.push({
 		type: "multi_together",
 		a: group_a,
@@ -662,17 +647,113 @@ ShapeOverlapSystem.prototype.add_groups_callback_together = function(group_a, gr
 	});
 }
 
-ShapeOverlapSystem.prototype.create_component = function(args) {
+////////////////////
+// collisions
+
+PhysicsResolutionSystem.prototype.add_pair_collide = function(a, b, callback) {
+	this._work.push({
+		type: "pair_collide",
+		a: a,
+		b: b,
+		callback: callback
+	});
+}
+
+PhysicsResolutionSystem.prototype.add_group_collide = function(group, callback) {
+	this._work.push({
+		type: "single_collide",
+		group: group,
+		callback: callback
+	});
+}
+
+PhysicsResolutionSystem.prototype.add_groups_collide = function(group_a, group_b, callback) {
+	this._work.push({
+		type: "multi_collide",
+		a: group_a,
+		b: group_b,
+		callback: callback
+	});
+}
+
+//builtin - resolve overlaps
+// (scaled by some amount)
+
+PhysicsResolutionSystem.prototype.add_pair_resolve = function(a, b, amount) {
+	this._work.push({
+		type: "pair_resolve",
+		a: a,
+		b: b,
+		amount: amount
+	});
+}
+
+PhysicsResolutionSystem.prototype.add_group_resolve = function(group, amount) {
+	this._work.push({
+		type: "single_resolve",
+		group: group,
+		amount: amount
+	});
+}
+
+PhysicsResolutionSystem.prototype.add_groups_resolve = function(group_a, group_b, amount) {
+	this._work.push({
+		type: "multi_resolve",
+		a: group_a,
+		b: group_b,
+		amount: amount
+	});
+}
+
+PhysicsResolutionSystem.prototype.add_tilemap_vs_group = function(tilemap, group, flag, amount) {
+	this._work.push({
+		type: "tilemap_group",
+		t: tilemap,
+		g: group,
+		flag: flag,
+		amount: amount
+	});
+}
+
+////////////////////////////////////////
+// reactions (to collisions)
+
+PhysicsResolutionSystem.prototype.add_react_bounce = function(group, bounce, slide) {
+	this._reacts.push({
+		type: "react_bounce",
+		group: group,
+		bounce: bounce,
+		slide: slide
+	});
+}
+
+//(book-keeping)
+
+PhysicsResolutionSystem.prototype.create_component = function(args) {
 	this._shapes++;
 	return args;
 }
 
-ShapeOverlapSystem.prototype.destroy_component = function(comp) {
+PhysicsResolutionSystem.prototype.destroy_component = function(comp) {
 	this._shapes--;
 	if(this._shapes < 0) console.error("Too many shapes were destroyed in overlap system: "+this.name);
 }
 
-ShapeOverlapSystem.prototype.update = function() {
+// (actually doing the work)
+PhysicsResolutionSystem.prototype.update = function() {
+	for(var i = 0; i < this._reacts.length; i++)
+	{
+		var r = this._reacts[i];
+		if(r.type == "react_bounce") {
+			r.group.foreach(function(v) {
+				if (v._oldpos === undefined) {
+					v._oldpos = new vec2();
+				}
+				v._oldpos.vset(v.transform.pos);
+			});
+		}
+	}
+
 	for(var i = 0; i < this._work.length; i++)
 	{
 		var w = this._work[i];
@@ -696,95 +777,8 @@ ShapeOverlapSystem.prototype.update = function() {
 		if(w.type == "multi_together") {
 			overlap_groups_callback_together(w.a, w.b, w.callback);
 		}
-	}
-}
 
-function ShapeCollideSystem() {
-	this._work = [];
-	this._shapes = 0;
-}
-
-//collisions
-
-ShapeCollideSystem.prototype.add_pair_collide = function(a, b, callback) {
-	this._work.push({
-		type: "pair_collide",
-		a: a,
-		b: b,
-		callback: callback
-	});
-}
-
-ShapeCollideSystem.prototype.add_group_collide = function(group, callback) {
-	this._work.push({
-		type: "single_collide",
-		group: group,
-		callback: callback
-	});
-}
-
-ShapeCollideSystem.prototype.add_groups_collide = function(group_a, group_b, callback) {
-	this._work.push({
-		type: "multi_collide",
-		a: group_a,
-		b: group_b,
-		callback: callback
-	});
-}
-
-//builtin - resolve overlaps
-// (scaled by some amount)
-
-ShapeCollideSystem.prototype.add_pair_resolve = function(a, b, amount) {
-	this._work.push({
-		type: "pair_resolve",
-		a: a,
-		b: b,
-		amount: amount
-	});
-}
-
-ShapeCollideSystem.prototype.add_group_resolve = function(group, amount) {
-	this._work.push({
-		type: "single_resolve",
-		group: group,
-		amount: amount
-	});
-}
-
-ShapeCollideSystem.prototype.add_groups_resolve = function(group_a, group_b, amount) {
-	this._work.push({
-		type: "multi_resolve",
-		a: group_a,
-		b: group_b,
-		amount: amount
-	});
-}
-
-ShapeCollideSystem.prototype.add_tilemap_vs_group = function(tilemap, group, flag, amount) {
-	this._work.push({
-		type: "tilemap_group",
-		t: tilemap,
-		g: group,
-		flag: flag,
-		amount: amount
-	});
-}
-
-ShapeCollideSystem.prototype.create_component = function(args) {
-	this._shapes++;
-	return args;
-}
-
-ShapeCollideSystem.prototype.destroy_component = function(comp) {
-	this._shapes--;
-	if(this._shapes < 0) console.error("Too many shapes were destroyed in collision system: "+this.name);
-}
-
-ShapeCollideSystem.prototype.update = function() {
-	for(var i = 0; i < this._work.length; i++)
-	{
-		var w = this._work[i];
+		//collisions
 		if(w.type == "pair_collide") {
 			collide_shapes_callback_together(w.a, w.b, w.callback);
 		}
@@ -795,6 +789,7 @@ ShapeCollideSystem.prototype.update = function() {
 			collide_groups_callback_together(w.a, w.b, w.callback);
 		}
 
+		//resolve
 		if(w.type == "pair_resolve") {
 			set_resolve_scale(w.amount);
 			collide_shapes_callback_together(w.a, w.b, callback_resolve);
@@ -808,9 +803,44 @@ ShapeCollideSystem.prototype.update = function() {
 			collide_groups_callback_together(w.a, w.b, callback_resolve);
 		}
 
+		//tilemap related
 		if(w.type == "tilemap_group") {
 			set_resolve_scale(w.amount);
-			collide_group_against_tilemap(w.g, w.t, w.flag);
+			resolve_group_against_tilemap(w.g, w.t, w.flag);
 		}
 	}
+
+	for(var i = 0; i < this._reacts.length; i++)
+	{
+		var r = this._reacts[i];
+		if(r.type == "react_bounce") {
+			var _normal = new vec2();
+			var _tangent = new vec2();
+			r.group.foreach(function(v) {
+				_normal.vset(v._oldpos).subi(v.transform.pos);
+				var lensq = _normal.length_squared();
+				//normalise
+				if(lensq == 0) return;
+				_normal.sdivi(Math.sqrt(lensq));
+				//generate tangent
+				_normal.rotli(Math.PI * 0.5, _tangent);
+				//figure restitution vars
+				var bounce = r.bounce;
+				var slide = r.slide;
+				//project
+				var vert = v.transform.vel.sproj(_normal);
+				var hori = v.transform.vel.sproj(_tangent);
+				if(vert > 0) {
+					vert *= -1;
+				} else {
+					bounce = 1;
+				}
+				//apply
+				_normal.smuli(bounce * vert);
+				_tangent.smuli(slide * hori);
+				v.transform.vel.vset(_normal).addi(_tangent);
+			});
+		}
+	}
+
 }
