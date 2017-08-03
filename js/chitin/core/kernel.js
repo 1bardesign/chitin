@@ -30,11 +30,28 @@ var fps = 0;
 var tick_time = 0;
 
 //internal
-var _base_dt = 1/target_fps;
-var _dt_limit = _base_dt;
+var _base_dt, _dt_limit;
+
 var _last_time = -1;
 var _loop_interval;
 var _kernel_frames = 0;
+
+function _recalc_dt() {
+	_base_dt = 1 / target_fps;
+	_dt_limit = _base_dt;
+}
+_recalc_dt();
+
+function init_chitin(options) {
+	if(options.fps === undefined) options.fps = 60;
+
+	target_fps = options.fps;
+	_recalc_dt();
+
+	if(options.width !== undefined && options.height !== undefined) {
+		init_canvas(options.width, options.height);
+	}
+}
 
 //(encapsulate)
 (function() {

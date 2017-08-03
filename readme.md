@@ -112,7 +112,7 @@ There are generic behaviour and state machine components for bolting ad-hoc beha
 
 - __Shape__
 
-	Comes in a few flavours (AABB and Circle at the moment) and describes some collidable geometry. Can be tested for overlap against other shapes, and collisions between them can be resolved.
+	Comes in a few flavours (AABB and Circle at the moment) and describes some collidable geometry. Can be tested for overlap against other shapes, and collisions between them can be resolved and reacted to.
 
 # Code Style - Not strictly enforced
 

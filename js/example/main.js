@@ -11,8 +11,11 @@
 function setup()
 {
 	/////////////////////////////////////////////
-	//screen setup
-	init_canvas(480, 270);
+	//kernel setup
+	init_chitin({
+		fps: 60,
+		width: 480, height: 270
+	})
 
 	/////////////////////////////////////////////
 	//preloading/system startup
