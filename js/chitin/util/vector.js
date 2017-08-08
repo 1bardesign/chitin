@@ -202,6 +202,22 @@ vec2.prototype.normalisei = function(into) {
 	return into;
 }
 
+vec2.prototype.normalisei_len = function(into) {
+	if(into === undefined) {
+		into = this;
+	}
+	var len = this.length();
+	if(len == 0) {
+		into.x = 0;
+		into.y = 0;
+	} else {
+		into.x = this.x / len;
+		into.y = this.y / len;
+	}
+	return len;
+}
+
+
 vec2.prototype.normalised = function() {
 	return this.normalisei(new vec2(0));
 }
@@ -288,6 +304,14 @@ vec2.prototype.dot = function(other) {
 	return this.x * other.y + this.y * other.x;
 }
 
+//cross
+//strictly speaking "doesn't exist", but
+//useful for a few 3d->2d algorithms
+vec2.prototype.cross = function(other)
+{
+	return this.x * other.y - this.y * other.x;
+}
+
 //projections
 
 vec2.prototype.sproj = function(other) {
@@ -352,8 +376,57 @@ vec2.prototype.rotld = function(angle) {
 	return this.rotldi(angle, new vec2());
 }
 
-//todo: rot90/180
+//rot90/180
+vec2.prototype.rot90li = function(into) {
+	if(into === undefined) {
+		into = this;
+	}
+	var nx = this.y;
+	var ny = -this.x;
+	into.x = nx;
+	into.y = ny;
+	return into;
+}
+
+vec2.prototype.rot90l = function() {
+	return this.rot90li(new vec2());
+}
+
+vec2.prototype.rot90ri = function() {
+	if(into === undefined) {
+		into = this;
+	}
+	var nx = -this.y;
+	var ny = this.x;
+	into.x = nx;
+	into.y = ny;
+	return into;
+}
+
+vec2.prototype.rot90r = function() {
+	return this.rot90ri(new vec2());
+}
+
+vec2.prototype.rot180i = function(into) {
+	if(into === undefined) {
+		into = this;
+	}
+	into.x = -this.x;
+	into.y = -this.y;
+	return into;
+}
+
+vec2.prototype.rot180 = function() {
+	return this.rot180i(new vec2());
+}
 
 //todo: lerp
 
 //todo: clamp
+
+//winding test
+function is_counter_clockwise(a, b, c)
+{
+	return (c.y - a.y) * (b.x - a.x) > (b.y - a.y) * (c.x - a.x);
+}
+
