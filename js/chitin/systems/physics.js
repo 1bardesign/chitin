@@ -11,6 +11,7 @@
 function Shape() {
 	this.type = "";
 	this.collided_side = 0;
+	this.last_normal = new vec2();
 	return this;
 }
 
@@ -21,7 +22,8 @@ var COLLIDED_RIGHT = (1 << 3);
 var COLLIDED_HORIZONTAL = COLLIDED_LEFT | COLLIDED_RIGHT;
 var COLLIDED_VERTICAL = COLLIDED_TOP | COLLIDED_BOTTOM;
 
-Shape.prototype.add_collided_side = function(normal) {
+Shape.prototype.set_collision_info = function(normal) {
+	this.last_normal.vset(normal);
 	if(normal.y > 0.5) {
 		this.collided_side |= COLLIDED_TOP;
 	}
@@ -60,6 +62,7 @@ Shape.prototype.get_bounds = function(tl, br) {
 //circle
 
 function Circle(transform, radius) {
+	Shape.call(this);
 	this.transform = transform;
 	this.radius = radius;
 	this.type = "circle";
@@ -84,12 +87,14 @@ Circle.prototype.bounds_br = function(into) {
 //aabb
 
 function AABB(transform, size) {
+	Shape.call(this);
 	this.transform = transform;
 	this.halfsize = size.smul(0.5);
 	this.type = "aabb";
 	return this;
 }
 AABB.prototype = Object.create(Shape.prototype);
+
 AABB.prototype.bounds_tl = function(into) {
 	into.vset(this.transform.pos).subi(this.halfsize);
 	return into;
@@ -97,6 +102,27 @@ AABB.prototype.bounds_tl = function(into) {
 
 AABB.prototype.bounds_br = function(into) {
 	into.vset(this.transform.pos).addi(this.halfsize);
+	return into;
+}
+
+//line
+
+function Line(start, end) {
+	Shape.call(this);
+	this.transform = start;
+	this.end = end;
+	this.type = "line";
+	return this;
+}
+Line.prototype = Object.create(Shape.prototype);
+
+Line.prototype.bounds_tl = function(into) {
+	into.vset(this.transform.pos).mini(this.end.pos);
+	return into;
+}
+
+Line.prototype.bounds_br = function(into) {
+	into.vset(this.transform.pos).maxi(this.end.pos);
 	return into;
 }
 
@@ -220,6 +246,84 @@ function _msv_circle_aabb(a, b, into) {
 
 function _msv_aabb_circle(a, b, into) {
 	return _msv_circle_aabb(b, a, into).smuli(-1);
+}
+
+//lines
+
+function _msv_line_line(a, b, into)
+{
+	var a_dir = a.end.pos.sub(a.transform.pos);
+	var b_dir = b.end.pos.sub(b.transform.pos);
+
+	var cross_dir = a_dir.cross(b_dir);
+
+	if (cross_dir != 0)
+	{
+		//not parallel -> maybe overlapping
+
+		//todo: adapt for capsules; get the distance between them
+		// 		by using normalised directions & "real" distances
+
+		var offset = b.transform.pos.sub(a.transform.pos);
+		var t = offset.cross(b_dir.sdiv(cross_dir));
+		var u = offset.cross(a_dir.sdiv(cross_dir));
+
+		if (t > 0 && t < 1 && u > 0 && u < 1)
+		{
+			if (t < 0.5)
+				return into.vset(a_dir).smul(t);
+			else
+				return into.vset(a_dir).smul(-1.0 + t);
+		}
+	}
+
+	return into.sset(0, 0);
+}
+
+//mixed checks
+
+function _msv_circle_line(a, b, into)
+{
+	var line_dir = b.end.pos.sub(b.transform.pos);
+	var line_len = line_dir.normalisei_len();
+
+	//check if we're within the segment
+	var relpos = a.transform.pos.sub(b.transform.pos);
+	var online = relpos.dot(line_dir);
+
+	//past the start edge; collide with start
+	if (online <= 0.0)
+	{
+		var circ = new Circle(b.transform, 0.0);
+		return msv_circle_circle(a, circ);
+	}
+	//past the end edge; collide with end
+	else if (online >= line_len)
+	{
+		var circ = new Circle(b.end, 0.0);
+		return msv_circle_circle(a, circ);
+	}
+
+	//on the line segment; collide with the line
+	var normal = line_dir.rot90l();
+
+	//use dot rather than proj to avoid normalising again
+	var dist = relpos.dot(normal);
+	if (Math.abs(dist) < a.radius)
+	{
+		if(dist > 0)
+			dist = -(a.radius - dist);
+		else
+			dist = a.radius + dist;
+		return into.vset(normal.smuli(dist));
+	}
+
+	return into.sset(0, 0);
+}
+
+function _msv_line_circle(a, b, into)
+{
+	return msv_circle_line(b, a, into).smuli(-1.0);
 }
 
 function _get_msv_for(a, b) {
@@ -376,6 +480,14 @@ function _overlap_aabb_circle(a, b) {
 
 function _overlap_circle_aabb(a, b) {
 	return _msv_to_overlap(a, b, _msv_circle_aabb);
+}
+
+//note; not true for co-incident lines, which arguably overlap
+//      but when used for polygon intersection, that means that "touching" edges aren't "crossing"
+function _overlap_line_line(a, b)
+{
+	return is_counter_clockwise(a.transform.pos, b.transform.pos, b.end.pos) != is_counter_clockwise(a.end.pos, b.transform.pos, b.end.pos) &&
+	       is_counter_clockwise(a.transform.pos, a.end.pos, b.transform.pos) != is_counter_clockwise(a.transform.pos, a.end.pos, b.end);
 }
 
 function _get_overlap_for(a, b) {
@@ -734,9 +846,9 @@ PhysicsResolutionSystem.prototype.add_react_cb = function(group, cb) {
 }
 
 //note down which side was collided
-PhysicsResolutionSystem.prototype.add_react_whichside = function(group) {
+PhysicsResolutionSystem.prototype.add_react_collision_info = function(group) {
 	this._reacts.push({
-		type: "react_whichside",
+		type: "react_collision_info",
 		group: group
 	});
 }
@@ -770,9 +882,9 @@ PhysicsResolutionSystem.prototype.update = function() {
 		var r = this._reacts[i];
 		if(r.type == "react_bounce" ||
 			r.type == "react_cb" ||
-			r.type == "react_whichside") {
+			r.type == "react_collision_info") {
 			r.group.foreach(function(v) {
-				if(r.type == "react_whichside") {
+				if(r.type == "react_collision_info") {
 					v.collided_side = 0;
 				}
 				if (v._oldpos === undefined) {
@@ -852,13 +964,13 @@ PhysicsResolutionSystem.prototype.update = function() {
 				_normal.sdivi(Math.sqrt(lensq));
 				r.callback(v, _normal);
 			});
-		} else if(r.type == "react_whichside") {
+		} else if(r.type == "react_collision_info") {
 			r.group.foreach(function(v) {
 				_normal.vset(v.transform.pos).subi(v._oldpos);
 				var lensq = _normal.length_squared();
 				if(lensq == 0) return;
 				_normal.sdivi(Math.sqrt(lensq));
-				v.add_collided_side(_normal);
+				v.set_collision_info(_normal);
 			});
 		} else if(r.type == "react_bounce") {
 			r.group.foreach(function(v) {
