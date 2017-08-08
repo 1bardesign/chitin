@@ -42,11 +42,11 @@ TransformSystem.prototype.update = function() {
 	for(var i = 0; i < this._c.length; i++) {
 		var c = this._c[i];
 		//dt mul
-		c.vel.smuli(_dt, this._vmt);
 		c.acc.smuli(_dt, this._amt);
+		c.vel.smuli(_dt, this._vmt);
 		//integrate
-		c.pos.addi(this._vmt);
 		c.vel.addi(this._amt);
+		c.pos.addi(this._vmt);
 		c.ang += c.avel * _dt;
 	}
 	push_debug_msg("Transforms : "+this._c.length);

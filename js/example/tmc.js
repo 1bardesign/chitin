@@ -21,80 +21,192 @@ TilemapCollisionState.prototype.start = function() {
 	//arbitrary behaviours
 	add_system("tmc::state_machine", new StateMachineSystem());
 	add_system("tmc::behaviour", new BehaviourSystem());
+	add_system("tmc::anim", new AnimatorSystem());
 	//(physics)
 	add_system("tmc::physics", new PhysicsResolutionSystem());
 	//sprites
 	add_system("tmc::sprite", new SpriteSystem("tmc::transform", false));
 	//tilemap in front
 	add_system("tmc::tilemap", new SharedTilemapSystem({
-		asset: "sprites",
+		asset: "platformer_tilemap",
 		transform: new Transform(),
 		framesize: new vec2(8,8)
 	}));
 	var tiles = system("tmc::tilemap").tilemap;
 
 	//load and build the tilemap
-	tiles.load_csv(
-		"1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1\n"+
-		"1,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,1\n"+
-		"1,0,0,0,0,1,1,1,0,0,0,0,0,0,1,0,0,0,0,0,1\n"+
-		"1,0,0,0,1,1,1,1,1,0,0,0,0,0,0,1,0,0,0,0,1\n"+
-		"1,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,1\n"+
-		"1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1\n"+
-		"1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1\n"+
-		"1,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,1\n"+
-		"1,0,0,0,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,1\n"+
-		"1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1\n"+
-		"1,0,0,0,0,0,0,0,0,0,0,1,1,1,1,0,0,1,0,0,1\n"+
-		"1,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,1,0,0,1\n"+
-		"1,1,1,0,0,1,0,1,1,1,1,1,0,0,0,0,0,1,0,0,1\n"+
-		"1,1,1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,1\n"+
-		"1,1,1,0,0,1,1,1,1,1,1,0,0,0,0,0,0,1,0,0,1\n"+
-		"1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1\n"+
-		"1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1\n"+
-		"1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1"
-	);
+	tiles.load_csv(fetch_file("platformer.csv").contents);
 	//centre the tilemap
 	tiles.transform.pos.sset(
 		-(tiles.size.x / 2) * tiles.framesize.x,
 		-(tiles.size.y / 2) * tiles.framesize.y
 	);
 	//collision flags
-	tiles.set_flag(1, 1);
+	for (var i = 24; i < 64; i++)
+		tiles.set_flag(i, 1);
 
 	//shared groups
 	var temp_ents = new Group();
 	var transforms = new Group();
 	var shapes = new Group();
 
+	//add collision stuff
 	system("tmc::physics").add_group_collide(shapes, callback_resolve, 0.50);
 	system("tmc::physics").add_tilemap_vs_group(tiles, shapes, 1, 0.95);
-	system("tmc::physics").add_react_bounce(shapes, 0.1, 1);
+	system("tmc::physics").add_react_bounce(shapes, -0.1, 1);
+	system("tmc::physics").add_react_whichside(shapes);
 
-	function player_controls(transform) {
+	var beetle_idle = new FrameXYAnimation(
+		0,
+		[0,0],
+		true
+	);
+
+	var beetle_run = new FrameXYAnimation(
+		15,
+		[
+			1,0,
+			2,0,
+			3,0,
+			4,0,
+		],
+		true
+	);
+
+	var beetle_jump = new FrameXYAnimation(
+		15,
+		[
+			0,1,
+			1,1,
+			2,1
+		],
+		false
+	);
+
+	var beetle_flap = new FrameXYAnimation(
+		15,
+		[
+			0,2,
+			1,2,
+			0,2,
+			1,2
+		],
+		false
+	);
+
+	//
+
+	function on_ground(shape) {
+		this.shape = shape;
+		this.last_time = -1;
+	}
+	on_ground.prototype.update = function() {
+		if(this.shape.has_collided_side(COLLIDED_BOTTOM)) {
+			this.last_time = run_time_scaled;
+		}
+	}
+	on_ground.prototype.within = function(seconds) {
+		return (run_time_scaled - this.last_time) <= seconds;
+	}
+
+	//
+
+	function player_controls(transform, onground) {
 		this.transform = transform;
+		this.onground = onground;
 		return this;
 	}
 	var _walk = new vec2();
 	player_controls.prototype.update = function() {
+		//gather
 		var s = this.e.c("sprite");
-		var framex = 0;
+		var t = this.transform;
+		//
+		var pressed_left = key_pressed("left");
+		var pressed_right = key_pressed("right")
+		var pressed_jump = key_just_pressed("up");
+		var currently_on_ground = this.onground.within(0);
+		//jumps!
+		var jumped = false;
+		if(currently_on_ground) {
+			this.jumps = 2;
+		}
+		//config
+		var walk_speed = 50;
+		var walk_amount = 200;
+
+		//do walking
 		_walk.sset(0,0);
-		if(key_pressed("left")) {
+		var not_pressed = !(pressed_left || pressed_right);
+		if(pressed_left && t.vel.x > -walk_speed) {
 			_walk.x -= 1;
 		}
-		if(key_pressed("right")) {
+		if(pressed_right && t.vel.x < walk_speed) {
 			_walk.x += 1;
 		}
-		_walk.smuli(100);
-		_walk.smuli(dt());
-		if(key_just_pressed("up")) {
-			_walk.y -= 70;
-			framex = 1;
+		_walk.smuli(walk_amount);
+		//do slowing
+		var limit = 1;
+		var av = Math.abs(t.vel.x);
+		var stop = false;
+		var slow = false;
+		if(not_pressed ||
+			(av > limit &&
+			(pressed_right && t.vel.x < -limit) ||
+			(pressed_left && t.vel.x > limit))) {
+			slow = true;
 		}
-		s.set_frame_xy(framex,1);
 
-		this.transform.vel.smuli(0.999).addi(_walk);
+		if(slow) {
+			_walk.x = 0;
+			t.vel.x *= 0.5;
+		}
+		//
+		_walk.smuli(dt());
+		//add movement vel
+		if(!stop) {
+			t.vel.addi(_walk);
+		} else {
+			t.vel.x = 0;
+		}
+
+		//jumping
+		if(currently_on_ground || this.jumps > 0)
+		{
+			if(pressed_jump) {
+				t.vel.y = -60;
+				this.jumps--;
+				jumped = true;
+			}
+		}
+
+		//(reused)
+		av = Math.abs(t.vel.x);
+
+		//sort out animation
+		var anim = this.e.c("anim");
+		var anim_name = "idle";
+		var force = false;
+		if(currently_on_ground && !jumped) {
+			if(av > 1) {
+				anim_name = "run";
+			}
+		} else {
+			anim_name = "jump";
+			if(jumped) {
+				force = true;
+				anim_name = "flap";
+			}
+		}
+
+		if(anim.finished() || force) {
+			anim.set(anim_name);
+		}
+
+		//flip dir
+		if(av > 5) {
+			s.flipx = (t.vel.x < 0);
+		}
 	}
 
 	for(var i = 0; i < 1; i++)
@@ -103,26 +215,34 @@ TilemapCollisionState.prototype.start = function() {
 
 		var transform = e.add("transform");
 		transform.pos.sset(Math.random() * 40, 0).rotli(Math.random()*Math.PI*2);
-		transform.acc.sset(0,50);
+		transform.acc.sset(0,120);
 		transforms.add(transform);
-
-		e.add("behaviour", new player_controls(transform));
-
-		e.add("sprite", {
-			asset: "sprites",
-			w: 8, h: 8,
-			transform: transform,
-			framepos: new vec2(0,8),
-			z: 0
-		});
 
 		var shape = e.add(
 			"physics",
-			//new AABB(transform, new vec2(8,8))
-			new Circle(transform, 4)
+			new AABB(transform, new vec2(12,8))
+			//new Circle(transform, 8)
 		);
 
 		shapes.push(shape);
+
+		var sprite = e.add("sprite", {
+			asset: "beetle",
+			w: 32, h: 32,
+			transform: transform,
+			framepos: new vec2(0,0),
+			z: 0
+		});
+
+		var anim = e.add("anim", new Animator({sprite: sprite}));
+		anim.add("idle", beetle_idle);
+		anim.add("run", beetle_run);
+		anim.add("jump", beetle_jump);
+		anim.add("flap", beetle_flap);
+
+		var onground = e.add("behaviour", new on_ground(shape));
+		var pc = e.add("behaviour", new player_controls(transform, onground));
+
 
 		temp_ents.push(e);
 	}

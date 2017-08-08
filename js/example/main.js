@@ -21,11 +21,15 @@ function setup()
 	//preloading/system startup
 
 	//data files
-	//load_file("some_data_file.csv");
+	load_file("platformer.csv");
 
 	//load images
 	load_image("sprites", false);
 	load_image("nbody", false);
+
+	load_image("beetle", false);
+	load_image("fruit", false);
+	load_image("platformer_tilemap", false);
 
 	//audio setup
 	set_volume(0.5);

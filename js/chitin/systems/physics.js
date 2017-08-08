@@ -10,28 +10,34 @@
 
 function Shape() {
 	this.type = "";
-	this.collisions = {};
+	this.collided_side = 0;
 	return this;
 }
 
-Shape.prototype.record_collision = function(name) {
-	this.collisions[name] = tick_time;
-}
+var COLLIDED_TOP = (1 << 0);
+var COLLIDED_BOTTOM = (1 << 1);
+var COLLIDED_LEFT = (1 << 2);
+var COLLIDED_RIGHT = (1 << 3);
+var COLLIDED_HORIZONTAL = COLLIDED_LEFT | COLLIDED_RIGHT;
+var COLLIDED_VERTICAL = COLLIDED_TOP | COLLIDED_BOTTOM;
 
-Shape.prototype.collision_time = function(name) {
-	var ret = this.collisions[name];
-	if(ret === undefined) {
-		ret = -1;
+Shape.prototype.add_collided_side = function(normal) {
+	if(normal.y > 0.5) {
+		this.collided_side |= COLLIDED_TOP;
 	}
-	return ret;
+	if (normal.y < -0.5) {
+		this.collided_side |= COLLIDED_BOTTOM;
+	}
+	if (normal.x > 0.5) {
+		this.collided_side |= COLLIDED_LEFT;
+	}
+	if (normal.x < -0.5) {
+		this.collided_side |= COLLIDED_RIGHT;
+	}
 }
 
-Shape.prototype.collided_within = function(name, time) {
-	return (tick_time - this.collision_time(name)) <= time;
-}
-
-Shape.prototype.just_collided = function(name) {
-	return this.collided_within(name, 1);
+Shape.prototype.has_collided_side = function(side_constant) {
+	return (this.collided_side & side_constant) != 0;
 }
 
 //bounds - generally used for broadphase stuff; should contain the entire object
@@ -718,6 +724,24 @@ PhysicsResolutionSystem.prototype.add_tilemap_vs_group = function(tilemap, group
 ////////////////////////////////////////
 // reactions (to collisions)
 
+//call a callback for any collisions that recieves the object and the collision normal
+PhysicsResolutionSystem.prototype.add_react_cb = function(group, cb) {
+	this._reacts.push({
+		type: "react_cb",
+		group: group,
+		callback: cb
+	});
+}
+
+//note down which side was collided
+PhysicsResolutionSystem.prototype.add_react_whichside = function(group) {
+	this._reacts.push({
+		type: "react_whichside",
+		group: group
+	});
+}
+
+//add a bounce reaction
 PhysicsResolutionSystem.prototype.add_react_bounce = function(group, bounce, slide) {
 	this._reacts.push({
 		type: "react_bounce",
@@ -744,8 +768,13 @@ PhysicsResolutionSystem.prototype.update = function() {
 	for(var i = 0; i < this._reacts.length; i++)
 	{
 		var r = this._reacts[i];
-		if(r.type == "react_bounce") {
+		if(r.type == "react_bounce" ||
+			r.type == "react_cb" ||
+			r.type == "react_whichside") {
 			r.group.foreach(function(v) {
+				if(r.type == "react_whichside") {
+					v.collided_side = 0;
+				}
 				if (v._oldpos === undefined) {
 					v._oldpos = new vec2();
 				}
@@ -813,11 +842,27 @@ PhysicsResolutionSystem.prototype.update = function() {
 	for(var i = 0; i < this._reacts.length; i++)
 	{
 		var r = this._reacts[i];
-		if(r.type == "react_bounce") {
-			var _normal = new vec2();
-			var _tangent = new vec2();
+		var _normal = new vec2();
+		var _tangent = new vec2();
+		if(r.type == "react_cb") {
 			r.group.foreach(function(v) {
-				_normal.vset(v._oldpos).subi(v.transform.pos);
+				_normal.vset(v.transform.pos).subi(v._oldpos);
+				var lensq = _normal.length_squared();
+				if(lensq == 0) return;
+				_normal.sdivi(Math.sqrt(lensq));
+				r.callback(v, _normal);
+			});
+		} else if(r.type == "react_whichside") {
+			r.group.foreach(function(v) {
+				_normal.vset(v.transform.pos).subi(v._oldpos);
+				var lensq = _normal.length_squared();
+				if(lensq == 0) return;
+				_normal.sdivi(Math.sqrt(lensq));
+				v.add_collided_side(_normal);
+			});
+		} else if(r.type == "react_bounce") {
+			r.group.foreach(function(v) {
+				_normal.vset(v.transform.pos).subi(v._oldpos);
 				var lensq = _normal.length_squared();
 				//normalise
 				if(lensq == 0) return;
@@ -830,7 +875,7 @@ PhysicsResolutionSystem.prototype.update = function() {
 				//project
 				var vert = v.transform.vel.sproj(_normal);
 				var hori = v.transform.vel.sproj(_tangent);
-				if(vert > 0) {
+				if(vert <= 0) {
 					vert *= -1;
 				} else {
 					bounce = 1;
