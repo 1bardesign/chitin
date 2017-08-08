@@ -53,8 +53,8 @@ TilemapCollisionState.prototype.start = function() {
 	//add collision stuff
 	system("tmc::physics").add_group_collide(shapes, callback_resolve, 0.50);
 	system("tmc::physics").add_tilemap_vs_group(tiles, shapes, 1, 0.95);
-	system("tmc::physics").add_react_bounce(shapes, -0.1, 1);
-	system("tmc::physics").add_react_whichside(shapes);
+	system("tmc::physics").add_react_bounce(shapes, 0, 1);
+	system("tmc::physics").add_react_collision_info(shapes);
 
 	var beetle_idle = new FrameXYAnimation(
 		0,
@@ -84,7 +84,7 @@ TilemapCollisionState.prototype.start = function() {
 	);
 
 	var beetle_flap = new FrameXYAnimation(
-		15,
+		20,
 		[
 			0,2,
 			1,2,
@@ -125,7 +125,7 @@ TilemapCollisionState.prototype.start = function() {
 		var pressed_left = key_pressed("left");
 		var pressed_right = key_pressed("right")
 		var pressed_jump = key_just_pressed("up");
-		var currently_on_ground = this.onground.within(0);
+		var currently_on_ground = this.onground.within(0.1);
 		//jumps!
 		var jumped = false;
 		if(currently_on_ground) {
@@ -220,8 +220,8 @@ TilemapCollisionState.prototype.start = function() {
 
 		var shape = e.add(
 			"physics",
-			new AABB(transform, new vec2(12,8))
-			//new Circle(transform, 8)
+			//new AABB(transform, new vec2(12,8))
+			new Circle(transform, 6)
 		);
 
 		shapes.push(shape);
