@@ -22,7 +22,7 @@ NBodySimState.prototype.start = function() {
 	add_system("nbody::state_machine", new StateMachineSystem());
 	add_system("nbody::behaviour", new BehaviourSystem());
 	//(physics)
-	add_system("nbody::collide", new ShapeOverlapSystem());
+	add_system("nbody::collide", new PhysicsResolutionSystem());
 	//sprites in the foreground
 	add_system("nbody::sprite", new SpriteSystem("nbody::transform", false));
 

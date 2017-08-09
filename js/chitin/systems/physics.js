@@ -134,9 +134,12 @@ var _phys_temps = {
 	//	todo: consider breaking these out into their own variables
 	//	 so there's not even push/pop
 	vpool: new ObjectPool(vec2, true),
+
+	//shared shapes for complex collisions
 	shapes: {
 		aabb: new AABB(new Transform(), new vec2(0,0)),
 		circle: new Circle(new Transform(), 0)
+		//todo: line
 	}
 };
 
@@ -325,6 +328,8 @@ function _msv_line_circle(a, b, into)
 {
 	return msv_circle_line(b, a, into).smuli(-1.0);
 }
+
+//todo: line-aabb
 
 function _get_msv_for(a, b) {
 	//same type? easier tests
