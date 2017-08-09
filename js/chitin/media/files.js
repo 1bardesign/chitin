@@ -73,23 +73,16 @@ function load_file(name)
 	};
 	try {
 		var xhttp = new XMLHttpRequest();
-		xhttp.open("GET", get_file_path(name), true);
-		xhttp.onreadystatechange = function()
-		{
-			if (this.readyState == 4)
+		xhttp.addEventListener("loadend", function(e) {
+			file.loaded = true;
+			file.contents = this.responseText;
+			if(file.contents == null) //failure?
 			{
-				file.loaded = true;
-				if(this.status == 200 || this.status == 0 || this.status == 304)
-				{
-					file.contents = this.responseText;
-				}
-				else
-				{
-					file.contents = "";
-					file.error = true;
-				}
+				file.contents = "";
+				file.error = true;
 			}
-		};
+		})
+		xhttp.open("GET", get_file_path(name), true);
 		xhttp.overrideMimeType('text/plain');
 		xhttp.send(null);
 	}
