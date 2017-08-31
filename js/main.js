@@ -66,8 +66,8 @@ function render()
 	render_systems();
 
 	//just putting _something_ on the screen to say hi!
-	set_fill("white");
-	set_font_center();
-	set_font_middle();
-	draw_text("hello chitin!", get_canvas_halfwidth(), get_canvas_halfheight());
+	set_colour(0xffffffff);
+	//set_font_center();
+	//set_font_middle();
+	//draw_text("hello chitin!", get_canvas_halfwidth(), get_canvas_halfheight());
 }

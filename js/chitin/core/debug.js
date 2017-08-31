@@ -24,6 +24,10 @@ function update_debug()
 function render_debug()
 {
 	if(debug_state == 0) return;
+
+	//TODO: font batching
+	return;
+
 	reset_render_translation();
 	//draw fps
 	set_font("10px Monospace");

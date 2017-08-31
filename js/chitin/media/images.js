@@ -35,89 +35,36 @@ function fetch_image(name) {
 	return null;
 }
 
-function image_flipped_id(flipx, flipy) {
-	return (flipx ? 1 : 0) | (flipy ? 2 : 0);
-}
-
-function image_flipx_from_id(id) {
-	return (id & 1) > 0;
-}
-
-function image_flipy_from_id(id) {
-	return (id & 2) > 0;
-}
-
-function flipped_image(image, flipx, flipy) {
-	var id = image_flipped_id(flipx, flipy);
-	if(id == 0) {
-		return image.element;
-	} else if(image.flipcache.hasOwnProperty(id)) {
-		return image.flipcache[id];
-	}
-
-	//otherwise generate it on the fly
-	var flip_surface = document.createElement("canvas");
-	flip_surface.width = image.width;
-	flip_surface.height = image.height;
-	var flip_context = flip_surface.getContext("2d");
-
-	//determine scale
-	var xscale = 1;
-	var xoffset = 0;
-	var yscale = 1;
-	var yoffset = 0;
-	if(flipx) {
-		xscale = -1;
-		xoffset = -image.width;
-	}
-	if(flipy) {
-		yscale = -1;
-		yoffset = -image.height;
-	}
-	flip_context.scale(xscale, yscale);
-
-	flip_context.drawImage(image.element,
-		0, 0, image.width, image.height,
-		xoffset, yoffset,
-		image.width, image.height
-	);
-
-	//write out to the cache
-	image.flipcache[id] = flip_surface;
-	//return it
-	return flip_surface;
-}
-
 //add an external image from a dom element (img, canvas, whatever)
-function add_external_image(name, element, generate_flipped) {
+function add_external_image(name, element) {
 	var image = {};
+	var gl = get_context();
+
 	image.loaded = true;
 	image.name = name;
-	image.flipcache = {};
 
 	image.element = element;
 	image.width = element.width;
 	image.height = element.height;
-
-	//generate flipped versions ahead of time
-	//(otherwise they will be lazy-loaded)
-	if(generate_flipped) {
-		flipped_image(image, true, false);
-		flipped_image(image, false, true);
-		flipped_image(image, true, true);
-	}
+	image.texture = twgl.createTexture(get_context(), {
+		src: image.element,
+		min: gl.NEAREST,
+		mag: gl.NEAREST
+	});
 
 	_g_images[name] = image;
 	return image;
 }
 
 //load an image from the assets folder
-function load_image(name, generate_flipped) {
+function load_image(name) {
 	//possible early-out if we've already loaded it
 	var fetched = fetch_image(name);
 	if(fetched !== null) {
 		return fetched;
 	}
+
+	var gl = get_context();
 
 	//if we don't have it, better load it now
 	_img_loaded = false;
@@ -125,26 +72,25 @@ function load_image(name, generate_flipped) {
 	var image = {};
 	image.loaded = false;
 	image.name = name;
-	image.flipcache = {};
 
 	image.element = document.createElement("img");
 	image.element.src = get_image_path(name);
 
 	image.width = -1;
 	image.height = -1;
+	image.texture = null;
 
 	image.element.onload = function() {
 		image.loaded = true;
 		//read the true size
 		image.width = image.element.width;
 		image.height = image.element.height;
-		//generate flipped versions ahead of time
-		//(otherwise they will be lazy-loaded)
-		if(generate_flipped) {
-			flipped_image(image, true, false);
-			flipped_image(image, false, true);
-			flipped_image(image, true, true);
-		}
+
+		image.texture = twgl.createTexture(get_context(), {
+			src: image.element,
+			min: gl.NEAREST,
+			mag: gl.NEAREST
+		});
 
 		check_images_loaded();
 	};
@@ -160,12 +106,13 @@ function draw_image_simple(img, x, y) {
 		return; //todo: maybe draw error sprite?
 	}
 
-	if(int_coords) {
+	if(_cg.int_coords) {
 		x = Math.round(x);
 		y = Math.round(y);
 	}
 
-	get_context().drawImage(img.element, x, y);
+	console.error("draw image not implemented");
+	//get_context().drawImage(img.element, x, y);
 }
 
 //draw the whole image (optionally flipped)
@@ -175,12 +122,13 @@ function draw_image_simple_flipped(img, x, y, flipx, flipy)
 		return; //todo: maybe draw error sprite?
 	}
 
-	if(int_coords) {
+	if(_cg.int_coords) {
 		x = Math.round(x);
 		y = Math.round(y);
 	}
 
-	get_context().drawImage(flipped_image(img, flipx, flipy), x, y);
+	console.error("draw image simple flipped not implemented");
+	//get_context().drawImage(flipped_image(img, flipx, flipy), x, y);
 }
 
 //draw a subsection of the image (optionally flipped)
@@ -190,7 +138,7 @@ function draw_image_ex(img, sx, sy, sw, sh, dx, dy, dw, dh, flipx, flipy)
 		return; //todo: maybe draw error sprite?
 	}
 
-	if(int_coords) {
+	if(_cg.int_coords) {
 		sx = Math.round(sx);
 		sy = Math.round(sy);
 		sw = Math.round(sw);
@@ -202,13 +150,22 @@ function draw_image_ex(img, sx, sy, sw, sh, dx, dy, dw, dh, flipx, flipy)
 	}
 
 	if(flipx) {
-		sx = img.width - sx - sw;
+		sx += sw;
+		sw *= -1;
 	}
 	if(flipy) {
-		sy = img.height - sy - sh;
+		sy += sh;
+		sh *= -1;
 	}
 
-	get_context().drawImage(flipped_image(img, flipx, flipy), sx, sy, sw, sh, dx, dy, dw, dh);
+	var pos = new vec2(dx, dy);
+	var halfsize = new vec2(dw, dh).smuli(0.5);
+	pos.addi(halfsize);
+	var framepos = new vec2(sx, sy);
+	var framesize = new vec2(sw, sh);
+
+	set_texture(img.name);
+	render_centred_angled_textured_quad(pos, halfsize, 0.0, framepos, framesize, 0xffffffff);
 }
 
 //draw a scaled subsection of the image defined by a 1d frame (optionally flipped)

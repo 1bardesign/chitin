@@ -23,7 +23,7 @@ function smooth_move_camera_to(x, y, amount)
 
 function apply_camera_translation()
 {
-	set_render_translation(get_canvas_halfwidth() - camera.x, get_canvas_halfheight() - camera.y);
+	set_render_translation(camera.x, camera.y);
 }
 
 //ensure the camera corners stay within these bounds as much as possible

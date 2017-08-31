@@ -24,12 +24,12 @@ function setup()
 	load_file("platformer.csv");
 
 	//load images
-	load_image("sprites", false);
-	load_image("nbody", false);
+	load_image("sprites");
+	load_image("nbody");
 
-	load_image("beetle", false);
-	load_image("fruit", false);
-	load_image("platformer_tilemap", false);
+	load_image("beetle");
+	load_image("fruit");
+	load_image("platformer_tilemap");
 
 	//audio setup
 	set_volume(0.5);
@@ -73,8 +73,8 @@ function update()
 
 function render()
 {
-	clear_canvas("#1e1817");
-	set_fill("#ead9d7");
+	clear_canvas(0xff1e1817);
+	set_colour(0xffead9d7);
 
 	render_systems();
 	global_sm.render();

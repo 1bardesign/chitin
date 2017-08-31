@@ -228,12 +228,15 @@ vec2.prototype.normalise = function() {
 
 //inverse
 
-vec2.prototype.inversei = function() {
-	return this.smuli(-1);
+vec2.prototype.inversei = function(into) {
+	if(into === undefined) {
+		into = this;
+	}
+	return this.smuli(-1, into);
 }
 
 vec2.prototype.inverse = function() {
-	return this.inversei(new vec2(0));
+	return this.inversei(new vec2());
 }
 
 //abs, minmax, clamp
@@ -341,8 +344,8 @@ vec2.prototype.rotri = function(angle, into) {
 	}
 	var c = Math.cos(angle);
 	var s = Math.sin(angle);
-	var nx = this.x * c - this.y * s;
-	var ny = this.x * s + this.y * c;
+	var nx = (this.x * c) - (this.y * s);
+	var ny = (this.x * s) + (this.y * c);
 	into.x = nx;
 	into.y = ny;
 	return into;

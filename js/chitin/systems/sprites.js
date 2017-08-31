@@ -129,10 +129,13 @@ SpriteSystem.prototype.update = function()
 SpriteSystem.prototype.render = function()
 {
 	//camera space
-	reset_render_translation()
 	if(!this.screen_space) {
 		apply_camera_translation();
+	} else {
+		reset_render_translation()
 	}
+
+	start_chitin_render();
 
 	//insert sprites on screen into render list in depth order
 	var render_list = [];
@@ -162,14 +165,17 @@ SpriteSystem.prototype.render = function()
 		var fsize = sprite.framesize;
 
 		//scale
-		var scalex = 1
-		var scaley = 1
+		var scalex = 1;
+		var scaley = 1;
 		var dx = pos.x - sprite.halfsize.x * scalex;
 		var dy = pos.y - sprite.halfsize.y * scaley;
 		var dw = size.x * scalex;
 		var dh = size.y * scaley;
 
 		//draw out
+		/*draw_rect(
+			dx, dy, dw, dh
+		);*/
 		draw_image_ex(
 			sprite.image,
 			fpos.x, fpos.y, fsize.x, fsize.y,
@@ -177,5 +183,8 @@ SpriteSystem.prototype.render = function()
 			sprite.flipx, sprite.flipy
 		);
 	}
+
+	end_chitin_render();
+
 	push_debug_msg("Sprites : "+this._c.length);
 }

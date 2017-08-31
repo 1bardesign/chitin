@@ -267,6 +267,8 @@ Tilemap.prototype._render_tilemap = function(x1, y1, x2, y2, ox, oy) {
 	y1 = Math.floor((y1 - oy) / this.framesize.y);
 	y2 = Math.ceil((y2 - oy) / this.framesize.y);
 
+	start_chitin_render();
+
 	for(var y = y1; y < y2; y++) {
 		if(y < 0 || y >= this.size.y) {
 			continue;
@@ -282,9 +284,11 @@ Tilemap.prototype._render_tilemap = function(x1, y1, x2, y2, ox, oy) {
 			}
 			var _x = (x * this.framesize.x) + ox;
 			var _y = (y * this.framesize.y) + oy;
+			//draw_rect(_x, _y, this.framesize.x, this.framesize.y);
 			draw_image_frame(this.img, _x, _y, t, this.framesize.x, this.framesize.y, false, false);
 		}
 	}
+	end_chitin_render();
 }
 
 Tilemap.prototype.render_screenspace = function() {

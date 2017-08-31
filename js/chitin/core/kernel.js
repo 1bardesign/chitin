@@ -49,7 +49,7 @@ function init_chitin(options) {
 	_recalc_dt();
 
 	if(options.width !== undefined && options.height !== undefined) {
-		init_canvas(options.width, options.height);
+		init_gl(options.width, options.height, false, false);
 	}
 }
 
@@ -106,11 +106,11 @@ function init_chitin(options) {
 			render_load_screen(progress);
 			return;
 		}
-		clear_canvas("#000");
-		set_font("16px monospace");
+		clear_canvas("0xff000000");
+		/*set_font("16px monospace");
 		set_font_middle();
 		set_font_center();
-		draw_text("LOADING", cnv.width/2, cnv.height/2);
+		draw_text("LOADING", cnv.width/2, cnv.height/2);*/
 	}
 
 	function _all_loaded()
